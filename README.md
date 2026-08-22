@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# hack-template
 
-## Getting Started
+Template Next.js pronto para hackathons de 48h.
 
-First, run the development server:
+## Como usar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+git clone <url-do-repositorio>
+cd hack-template
+pnpm install
+cp .env.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000) para ver o resultado.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 16** — framework React com App Router e Server Components.
+- **React 19** — biblioteca de UI.
+- **Tailwind v4** — estilização utilitária, configurada via `@theme` no CSS.
+- **shadcn/ui** (`base-nova`) — componentes acessíveis copiados para o repositório.
+- **TypeScript** — tipagem estática em todo o projeto.
+- **pnpm** — gerenciador de pacotes.
 
-## Learn More
+## Estrutura de pastas
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/                  # rotas, layouts e páginas (App Router)
+  api/                # route handlers (API routes)
+  layout.tsx          # layout raiz (fontes, ThemeProvider, Toaster)
+  page.tsx            # página inicial
+  globals.css         # Tailwind v4 + tema shadcn
+components/
+  ui/                 # componentes shadcn/ui
+  *.tsx               # componentes custom do projeto
+lib/
+  utils.ts            # helper cn() usado pelo shadcn
+  constants.ts        # constantes globais do app
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Adicionando componentes shadcn
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Para adicionar um novo componente shadcn/ui ao projeto, rode:
 
-## Deploy on Vercel
+```bash
+pnpm dlx shadcn@latest add [nome]
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Substitua `[nome]` pelo componente desejado (ex: `avatar`, `select`, `dropdown-menu`). O arquivo é criado em `components/ui/`.
