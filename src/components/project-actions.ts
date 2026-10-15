@@ -6,7 +6,9 @@ import { parseProjectFile } from "@/persistence/file-format";
 import { loadProject, saveProject } from "@/persistence/storage";
 import { selectActiveCircuit, useEditor } from "@/store/editor-store";
 import { toast } from "@/store/toast-store";
+import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
+import { staticDiagnostics } from "./diagnostics";
 
 export async function saveNow() {
   await saveProject(useEditor.getState().project);
@@ -59,4 +61,17 @@ export async function exportImage(kind: "svg" | "png") {
   } catch {
     toast(t("messages.exportFailed"), "error");
   }
+}
+
+/** Inicia (ou retoma) a simulação. Se o desenho tem erros graves, pergunta antes. */
+export function startSimulation() {
+  const sim = useSim.getState();
+  if (sim.status === "stopped") {
+    const errors = staticDiagnostics(useEditor.getState().project).filter((d) => d.severity === "error");
+    if (errors.length > 0 && !confirm(t("diagnostics.confirmRun", { count: errors.length }))) {
+      useUi.getState().setBottomTab("warnings");
+      return;
+    }
+  }
+  sim.start();
 }

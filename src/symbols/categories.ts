@@ -6,6 +6,8 @@ export const CATEGORIES = [
   { id: "pneu-actuators", domain: "pneumatic" },
   { id: "pneu-directional", domain: "pneumatic" },
   { id: "pneu-flow-check", domain: "pneumatic" },
+  { id: "pneu-pressure", domain: "pneumatic" },
+  { id: "pneu-signal", domain: "pneumatic" },
   { id: "hyd-supply", domain: "hydraulic" },
   { id: "hyd-actuators", domain: "hydraulic" },
   { id: "hyd-valves", domain: "hydraulic" },

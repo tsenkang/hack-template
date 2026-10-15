@@ -59,7 +59,7 @@ export const valve32noButton = makeValveDef({
 export const valve32ncRoller = makeValveDef({
   type: "pneu.valve.3-2-nc.roller-spring",
   domain: "pneumatic",
-  category: "pneu-directional",
+  category: "pneu-signal",
   ports: PORTS_3_2,
   squares: SQUARES_3_2_NC,
   restIndex: 1,
@@ -141,4 +141,140 @@ export const valve52solenoidSolenoid = makeValveDef({
   left: "solenoid",
   right: "solenoid",
   keywords: ["solenoide", "eletroválvula", "duplo solenoide", "memória"],
+});
+
+const PORTS_2_2: ValvePort[] = [
+  { id: "2", x: 20, side: "top" },
+  { id: "1", x: 20, side: "bottom" },
+];
+
+const PORTS_4_2: ValvePort[] = [
+  { id: "4", x: 10, side: "top" },
+  { id: "2", x: 30, side: "top" },
+  { id: "1", x: 10, side: "bottom" },
+  { id: "3", x: 30, side: "bottom" },
+];
+
+export const valve22ncButton = makeValveDef({
+  type: "pneu.valve.2-2-nc.button-spring",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_2_2,
+  squares: [
+    { flows: [["1", "2"]], blocked: [] },
+    { flows: [], blocked: ["1", "2"] },
+  ],
+  restIndex: 1,
+  left: "button",
+  right: "spring",
+  keywords: ["2/2", "liga-desliga", "bloqueio", "registro"],
+});
+
+export const valve32ncPedal = makeValveDef({
+  type: "pneu.valve.3-2-nc.pedal-spring",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "pedal",
+  right: "spring",
+  keywords: ["pedal", "pé"],
+});
+
+export const valve32ncRollerOneWay = makeValveDef({
+  type: "pneu.valve.3-2-nc.roller-oneway-spring",
+  domain: "pneumatic",
+  category: "pneu-signal",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "roller-oneway",
+  right: "spring",
+  keywords: ["gatilho", "rolete escamoteável", "unidirecional", "fim de curso", "sinal preso"],
+});
+
+export const valve32ncProximity = makeValveDef({
+  type: "pneu.valve.3-2-nc.proximity",
+  domain: "pneumatic",
+  category: "pneu-signal",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "proximity",
+  right: "spring",
+  keywords: ["sensor", "proximidade", "sem contato", "reflexão"],
+});
+
+export const valve42leverDetent = makeValveDef({
+  type: "pneu.valve.4-2.lever-detent",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_4_2,
+  squares: [
+    { flows: [["1", "4"], ["2", "3"]], blocked: [] },
+    { flows: [["1", "2"], ["4", "3"]], blocked: [] },
+  ],
+  restIndex: 1,
+  left: "lever-detent",
+  right: "detent",
+  keywords: ["4/2", "alavanca", "trava", "manual"],
+});
+
+export const valve52leverDetent = makeValveDef({
+  type: "pneu.valve.5-2.lever-detent",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_5_2,
+  squares: SQUARES_5_2,
+  restIndex: 1,
+  left: "lever-detent",
+  right: "detent",
+  keywords: ["alavanca", "trava", "manual", "memória"],
+});
+
+/** 5/3 centrada por molas, com três tipos de centro. */
+function valve53(type: string, center: { flows: (readonly [string, string])[]; blocked: string[] }, keywords: string[]) {
+  return makeValveDef({
+    type,
+    domain: "pneumatic",
+    category: "pneu-directional",
+    ports: PORTS_5_2,
+    squares: [SQUARES_5_2[0], center, SQUARES_5_2[1]],
+    restIndex: 1,
+    left: "solenoid",
+    right: "solenoid",
+    springCentered: true,
+    keywords: ["5/3", "três posições", "solenoide", ...keywords],
+  });
+}
+
+export const valve53closed = valve53("pneu.valve.5-3-closed.solenoid", { flows: [], blocked: ["4", "2", "5", "1", "3"] }, [
+  "centro fechado",
+  "parada intermediária",
+]);
+export const valve53exhaust = valve53(
+  "pneu.valve.5-3-exhaust.solenoid",
+  { flows: [["4", "5"], ["2", "3"]], blocked: ["1"] },
+  ["centro aberto", "centro em escape", "alívio"],
+);
+export const valve53pressure = valve53(
+  "pneu.valve.5-3-pressure.solenoid",
+  { flows: [["1", "4"], ["1", "2"]], blocked: ["5", "3"] },
+  ["centro pressurizado", "centro em pressão"],
+);
+
+/** Válvula de sequência: comuta 1→2 quando a pressão no piloto 12 passa do valor ajustado na mola. */
+export const sequenceValve = makeValveDef({
+  type: "pneu.valve.sequence",
+  domain: "pneumatic",
+  category: "pneu-pressure",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "pilot",
+  right: "spring",
+  pilotIds: { left: "12" },
+  adjustableSpring: true,
+  keywords: ["sequência", "pressão", "pressostato pneumático", "comutação por pressão"],
 });

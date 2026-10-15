@@ -50,6 +50,8 @@ export interface EditorState {
   addComponent(type: string, at: Point): string | null;
   setPositions(positions: Record<string, Point>): void;
   addConnection(from: PortRef, to: PortRef): string | null;
+  /** Insere a peça no meio de uma linha: a linha vira duas, passando pelos conectores `ports`. */
+  insertOnWire(type: string, place: Pick<ComponentInstance, "x" | "y" | "rotation">, wireId: string, ports: [string, string]): string | null;
   nudgeSelection(dx: number, dy: number): void;
   rotateSelection(): void;
   mirrorSelection(): void;
@@ -224,6 +226,24 @@ export const useEditor = create<EditorState>()((set, get) => {
         { selection: [wire.id] },
       );
       return wire.id;
+    },
+    insertOnWire(type, place, wireId, [nearFrom, nearTo]) {
+      const { project } = get();
+      const circuit = activeCircuit();
+      const wire = circuit.connections.find((w) => w.id === wireId);
+      if (!wire || !getDef(type)) return null;
+      const inst = { ...createInstance(project, type, place.x, place.y), rotation: place.rotation };
+      const a: Connection = { id: createId("w"), from: wire.from, to: { componentId: inst.id, portId: nearFrom }, waypoints: [] };
+      const b: Connection = { id: createId("w"), from: { componentId: inst.id, portId: nearTo }, to: wire.to, waypoints: [] };
+      commit(
+        updateCircuit(project, circuit.id, (c) => ({
+          ...c,
+          components: [...c.components, inst],
+          connections: [...c.connections.filter((w) => w.id !== wireId), a, b],
+        })),
+        { selection: [inst.id] },
+      );
+      return inst.id;
     },
     nudgeSelection(dx, dy) {
       const ids = selectedSet();

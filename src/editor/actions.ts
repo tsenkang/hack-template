@@ -40,3 +40,17 @@ export function insertAtCenter(type: string) {
   const { w, h } = s.canvasSize;
   s.addComponent(type, { x: (w / 2 - v.x) / v.zoom, y: (h / 2 - v.y) / v.zoom });
 }
+
+/** Abre a aba do circuito, seleciona a peça e centraliza a vista nela (sem mudar o zoom). */
+export function focusComponent(circuitId: string, componentId: string) {
+  const s = useEditor.getState();
+  s.setActiveCircuit(circuitId);
+  const comp = selectActiveCircuit(useEditor.getState()).components.find((c) => c.id === componentId);
+  const def = comp && getDef(comp.type);
+  if (!comp || !def) return;
+  if (!isSimulating()) useEditor.getState().select([componentId]);
+  const b = componentBounds(comp, def);
+  const v = selectViewport(useEditor.getState());
+  const { w, h } = useEditor.getState().canvasSize;
+  useEditor.getState().setViewport({ ...v, x: w / 2 - (b.x + b.w / 2) * v.zoom, y: h / 2 - (b.y + b.h / 2) * v.zoom });
+}

@@ -4,13 +4,13 @@
  * Todas as abas do projeto são simuladas juntas.
  */
 import type { SimCircuit, SimComponent, SimSpec } from "./sim-types";
-import { portKey } from "./sim-types";
+import { internalPorts, portKey } from "./sim-types";
 import type { Project } from "./types";
 
 /** O que o compilador precisa saber de cada tipo de peça. */
 export interface PartInfo {
   sim?: SimSpec;
-  ports: readonly { id: string; kind: string }[];
+  ports: readonly { id: string; kind: string; exhaust?: boolean }[];
 }
 
 class UnionFind {
@@ -40,12 +40,18 @@ export function compileProject(project: Project, lookup: (type: string) => PartI
       const info = lookup(comp.type);
       if (!info?.sim) continue;
       const spec = info.sim;
-      const ports = info.ports
-        .filter((p) => p.kind === "pneumatic" || p.kind === "pilot")
-        .map((p) => ({ id: p.id, ventsWhenOpen: p.kind === "pneumatic" && spec.kind !== "gauge" }));
+      const closedWhenOpen = spec.kind === "gauge" || spec.kind === "suction-cup";
+      const ports = [
+        ...info.ports
+          .filter((p) => p.kind === "pneumatic" || p.kind === "pilot")
+          .map((p) => ({ id: p.id, ventsWhenOpen: p.kind === "pneumatic" && !closedWhenOpen, exhaust: Boolean(p.exhaust) })),
+        ...internalPorts(spec).map((id) => ({ id, ventsWhenOpen: false, exhaust: false })),
+      ];
       for (const p of ports) known.add(portKey(comp.id, p.id));
-      // Ponto de ligação: todos os conectores são o mesmo ponto.
-      if (spec.kind === "junction") for (const p of ports.slice(1)) uf.union(portKey(comp.id, ports[0].id), portKey(comp.id, p.id));
+      // Ponto de ligação e reservatório: todos os conectores são o mesmo ponto.
+      if (spec.kind === "junction" || spec.kind === "reservoir") {
+        for (const p of ports.slice(1)) uf.union(portKey(comp.id, ports[0].id), portKey(comp.id, p.id));
+      }
       components.push({ id: comp.id, label: comp.label, spec, params: { ...comp.params }, ports });
     }
   }

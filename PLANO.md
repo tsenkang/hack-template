@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 2 — Pneumática simples** concluída. Aguardando OK para iniciar a Fase 3.
+> Status: **Fase 3 — Pneumática completa** concluída. Aguardando OK para iniciar a Fase 4.
 
 ---
 
@@ -188,5 +188,38 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - O solver usa matriz densa, que é simples e suficiente para circuitos de aula. Se um circuito muito grande ficar lento em 10×, a troca por um solver esparso entra na Fase 7, sem mudar o resto do motor.
 - Peças elétricas e hidráulicas ainda não simulam (Fases 4 e 5). Por enquanto, o clique no solenoide funciona como o acionamento manual de emergência que as válvulas reais têm.
 
+### Fase 3 — Pneumática completa ✅
+- **Biblioteca pneumática: 46 peças.**
+  - Fonte e alimentação: compressor (vazão limitada) e reservatório de ar.
+  - Atuadores: cilindros com amortecimento, de haste dupla e sem haste; garra; motor pneumático (com rpm na tela); gerador de vácuo e ventosa.
+  - Válvulas direcionais: 2/2; 3/2 com pedal; 4/2 e 5/2 com alavanca e trava; 5/3 de centro fechado, aberto (escape) e pressurizado.
+  - Bloqueio, lógica e vazão: simultaneidade (E), alternadora (OU), escape rápido, reguladora de vazão bidirecional.
+  - Pressão: regulador, alívio e válvula de sequência.
+  - Sinal: sensor de proximidade, rolete escamoteável (gatilho), temporizadores com retardo na ligação e no desligamento, contador com reset.
+- **Motor**:
+  - novos acionamentos (pedal, trava, rolete escamoteável que só aciona num sentido, proximidade);
+  - válvulas de 3 posições centradas por molas e pressão de comutação ajustável;
+  - amortecimento de fim de curso, tratado de forma implícita (estável);
+  - redes internas para peças com volume próprio (reservatório do temporizador).
+  - Os temporizadores são pneumáticos de verdade (agulha + reservatório), calibrados para o tempo ajustado com erro abaixo de ±20% nos testes.
+- **Detector de erros**:
+  - no desenho: sem fonte de ar, conector solto (escapes 3 e 5 são permitidos), piloto sem sinal, rolete apontando para cilindro inexistente, rótulo repetido;
+  - na simulação: sobrepressão, sinal preso e ar escapando por conector solto.
+
+  Os avisos aparecem na aba "Avisos" (com contador), como selos "!" nas peças e, ao clicar, a tela leva até a peça. Ao iniciar uma simulação com erro grave, o app pergunta antes.
+- **Diagrama de fases** (trajeto-tempo) desenhado durante a simulação: uma faixa por cilindro, passos numerados automaticamente e tooltip com tempo e posição.
+- **Inserir peça sobre uma linha**: soltar uma peça da biblioteca em cima de um tubo encaixa a peça no meio, girando se precisar e respeitando o sentido (ex.: entrada da retenção do lado de onde vem o ar).
+- **Rastro do sinal**: selecionar uma linha destaca todas as linhas ligadas a ela.
+- **Testes**: 188 unitários, incluindo:
+  - E, OU, escape rápido, temporizadores, contador, 5/3 parando no meio, trava, sequência, gatilho, haste dupla, amortecimento, motor, vácuo e avisos;
+  - a sequência **A+ B+ B− A−**: com roletes escamoteáveis ela completa os quatro passos; com roletes comuns ela trava por sinal preso e gera o aviso.
+
+  E 16 de tela (incluindo detector de erros, inserir sobre linha e diagrama de fases).
+
+**Decisões da Fase 3**
+- O diagrama é **trajeto-tempo** com os passos marcados por cima (um passo começa quando algum cilindro sai do repouso). Assim ele mostra ao mesmo tempo a ordem dos passos e a duração de cada um.
+- O **pressostato** foi para a Fase 4, porque ele gera um sinal elétrico. A válvula de sequência cobre o caso pneumático.
+- **Cruzamento sem ligação** não virou peça: linhas que se cruzam não se ligam, e o ponto cheio só aparece onde as linhas realmente se juntam (num conector ou no ponto de ligação T).
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 3 — Pneumática completa** (resto da biblioteca, temporizador, contador, diagrama de fases, detector de erros, inserir peça sobre uma linha).
+Com o OK do usuário: **Fase 4 — Elétrica** (botões, relés, selo, temporizadores e contadores elétricos, sensores, pressostato, eletropneumática funcionando e diagrama em escada).

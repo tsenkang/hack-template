@@ -6,7 +6,7 @@ import { useEditor } from "@/store/editor-store";
 import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { GRID } from "@/symbols/types";
-import { saveNow } from "./project-actions";
+import { saveNow, startSimulation } from "./project-actions";
 
 /** Atalhos de teclado globais. Ignorados enquanto se digita num campo. */
 export function useShortcuts() {
@@ -23,7 +23,7 @@ export function useShortcuts() {
       if (e.key === "F5") {
         e.preventDefault();
         if (sim.status === "running") sim.pause();
-        else sim.start();
+        else startSimulation();
         return;
       }
       if (sim.status !== "stopped") {

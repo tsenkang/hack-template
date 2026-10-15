@@ -21,7 +21,7 @@ import { useEditor } from "@/store/editor-store";
 import { SPEEDS, useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { IconButton } from "./IconButton";
-import { exportImage, exportJson, newProject, saveNow } from "./project-actions";
+import { exportImage, exportJson, newProject, saveNow, startSimulation } from "./project-actions";
 
 const divider = <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />;
 
@@ -84,7 +84,7 @@ export function TopBar() {
             <Pause size={18} />
           </IconButton>
         ) : (
-          <IconButton label={`${t("toolbar.play")} (F5)`} onClick={() => sim().start()} data-testid="sim-play">
+          <IconButton label={`${t("toolbar.play")} (F5)`} onClick={startSimulation} data-testid="sim-play">
             <Play size={18} />
           </IconButton>
         )}

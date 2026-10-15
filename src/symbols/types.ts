@@ -15,6 +15,8 @@ export interface PortDef {
   x: number;
   y: number;
   kind: PortKind;
+  /** Escape (3, 5…): pode ficar solto sem aviso de vazamento. */
+  exhaust?: boolean;
 }
 
 /** Parâmetro editável no painel de propriedades. */

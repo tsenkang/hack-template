@@ -28,6 +28,8 @@ interface Props {
   id: string;
   points: Point[];
   selected: boolean;
+  /** Ligada à linha selecionada (rastro do sinal). */
+  traced: boolean;
   /** Linha de comando (piloto): tracejada. */
   pilot: boolean;
   state?: WireSimState;
@@ -39,7 +41,7 @@ interface Props {
  * mostram para onde o ar anda. A forma da linha (espessura, tracejado) também
  * muda, para não depender só da cor.
  */
-export const WireView = memo(function WireView({ id, points, selected, pilot, state, onPointerDown }: Props) {
+export const WireView = memo(function WireView({ id, points, selected, traced, pilot, state, onPointerDown }: Props) {
   const d = pointsToPath(points);
   const pressurized = state !== undefined && state.p > PRESSURE_ON;
   const level = state ? Math.min(1, Math.max(0, state.p / PRESSURE_FULL)) : 0;
@@ -51,7 +53,7 @@ export const WireView = memo(function WireView({ id, points, selected, pilot, st
   return (
     <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
       <path className="wire-hit" d={d} />
-      {selected && <path className="wire-selected" d={d} data-export-ignore />}
+      {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
       <path
         className={clsx(
           "wire",

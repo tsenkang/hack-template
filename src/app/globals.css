@@ -205,6 +205,14 @@ body {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.wire-traced {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.18;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 /* Simulação: com pressão = linha grossa e azul forte; sem pressão = fina e clara. */
 .wire-pressurized {
   stroke: var(--line-pressure);
@@ -234,6 +242,39 @@ body {
     stroke-dashoffset: -24;
   }
 }
+/* ---------- Gráficos (diagrama de fases) ---------- */
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.chart-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+.chart-text {
+  fill: var(--text-muted);
+  font-family: var(--font-sans);
+}
+.chart-label {
+  fill: var(--text);
+  font-family: var(--font-sans);
+}
+.diag-badge-error { fill: var(--danger); }
+.diag-badge-warning { fill: #b45309; }
+.diag-badge-info { fill: var(--accent); }
+.diag-badge-text {
+  fill: #fff;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .junction-dot {
   fill: var(--sym-stroke);
   pointer-events: none;

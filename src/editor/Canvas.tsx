@@ -5,10 +5,11 @@ import type { Point } from "@/engine/core/types";
 import { t } from "@/i18n";
 import { selectActiveCircuit, selectViewport, useEditor } from "@/store/editor-store";
 import { useSim } from "@/store/sim-store";
-import type { Actuator } from "@/engine/core/sim-types";
+import { MANUAL_ACTUATORS } from "@/engine/core/sim-types";
 import { getDef } from "@/symbols/registry";
 import { GRID } from "@/symbols/types";
 import { CanvasControls } from "./CanvasControls";
+import { DiagnosticMarkers } from "./DiagnosticMarkers";
 import { ComponentNode } from "./ComponentNode";
 import {
   componentBounds,
@@ -24,14 +25,23 @@ import {
 import { routeOrthogonal, simplify } from "./routing";
 import { SimLegend } from "./SimLegend";
 import { WireView } from "./WireView";
-import { allPorts, canConnect, pointsToPath, portInfo, routeAll, type PortInfo } from "./wires";
+import {
+  allPorts,
+  canConnect,
+  hitWire,
+  planInsertOnWire,
+  pointsToPath,
+  portInfo,
+  routeAll,
+  wireNets,
+  type PortInfo,
+} from "./wires";
 
 /** Tipo MIME usado ao arrastar uma peça da biblioteca para o desenho. */
 export const DND_MIME = "application/x-fluxolab-part";
 
 /** Distância (em pixels da tela) para "grudar" a linha num conector. */
 const PORT_SNAP_PX = 16;
-const MANUAL: readonly Actuator[] = ["button", "lever", "roller", "solenoid"];
 
 type Drag =
   | { kind: "pan"; start: Point; origin: Viewport }
@@ -88,8 +98,15 @@ export function Canvas() {
     for (const w of circuit.connections) {
       if (kindOf.get(portKey(w.from)) === "pilot" || kindOf.get(portKey(w.to)) === "pilot") pilotWires.add(w.id);
     }
-    return { openPorts, junctions, pilotWires };
+    return { openPorts, junctions, pilotWires, nets: wireNets(circuit) };
   }, [circuit]);
+
+  /** Rastro do sinal: com uma linha selecionada, destaca todas as linhas ligadas a ela. */
+  const traced = useMemo(() => {
+    const nets = new Set(selection.map((id) => topology.nets.get(id)).filter(Boolean));
+    if (nets.size === 0) return new Set<string>();
+    return new Set(circuit.connections.filter((w) => nets.has(topology.nets.get(w.id))).map((w) => w.id));
+  }, [selection, topology, circuit]);
 
   /** Ponto do evento em coordenadas da tela do SVG. */
   const local = useCallback((e: { clientX: number; clientY: number }): Point => {
@@ -158,8 +175,8 @@ export function Canvas() {
       if (!comp || !def?.interactive) return false;
       let side: "left" | "right" = "left";
       if (def.sim?.kind === "valve") {
-        const leftManual = MANUAL.includes(def.sim.left);
-        const rightManual = MANUAL.includes(def.sim.right);
+        const leftManual = MANUAL_ACTUATORS.includes(def.sim.left);
+        const rightManual = MANUAL_ACTUATORS.includes(def.sim.right);
         if (leftManual && rightManual) {
           const click = screenToWorld(selectViewport(s), local(e));
           const l = localToWorld(comp, def, { x: 15, y: def.height / 2 });
@@ -356,7 +373,16 @@ export function Canvas() {
     if (!type || simulating) return;
     e.preventDefault();
     const s = useEditor.getState();
-    s.addComponent(type, screenToWorld(selectViewport(s), local(e)));
+    const world = screenToWorld(selectViewport(s), local(e));
+    // Soltou em cima de uma linha: a peça entra no meio dela (a linha vira duas).
+    const hit = hitWire(routes, world, 10 / selectViewport(s).zoom);
+    const def = getDef(type);
+    const wire = hit && circuit.connections.find((w) => w.id === hit.wireId);
+    const fromComp = wire && circuit.components.find((c) => c.id === wire.from.componentId);
+    const from = fromComp && portInfo(fromComp, wire.from.portId);
+    const plan = hit && def && from ? planInsertOnWire(def, hit, from.pos, from.kind) : null;
+    if (plan && wire) s.insertOnWire(type, plan, wire.id, plan.ports);
+    else s.addComponent(type, world);
     svgRef.current?.focus();
   };
 
@@ -408,6 +434,7 @@ export function Canvas() {
                   id={w.id}
                   points={points}
                   selected={selected.has(w.id)}
+                  traced={traced.has(w.id)}
                   pilot={topology.pilotWires.has(w.id)}
                   state={snapshot?.wires[w.id]}
                   onPointerDown={onWirePointerDown}
@@ -427,6 +454,7 @@ export function Canvas() {
               onPortPointerDown={onPortPointerDown}
             />
           ))}
+          <DiagnosticMarkers />
           {topology.junctions.map((p) => (
             <circle key={`${p.x},${p.y}`} className="junction-dot" cx={p.x} cy={p.y} r={2.6} />
           ))}

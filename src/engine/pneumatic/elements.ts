@@ -1,52 +1,32 @@
 /**
- * Peças pneumáticas no motor: cada uma vira um ou mais orifícios entre redes.
+ * Peças pneumáticas "de orifício": fonte, reservatório, reguladores, retenção,
+ * reguladoras de vazão, válvulas E/OU e escape rápido. Cada uma vira um ou mais
+ * orifícios (ramos) entre as redes ligadas aos seus conectores.
  */
 import type { BuildContext, Element, Runtime } from "../core/element";
 import { num } from "../core/element";
-import type { Actuator, ComponentSimState, SimSpec } from "../core/sim-types";
+import type { ComponentSimState } from "../core/sim-types";
 import type { ParamValue } from "../core/types";
 import type { Branch } from "../solver/network";
-import { BAR, conductanceFromNominal, fromBarGauge, orificeFlow, P_ATM, toBarGauge } from "./flow";
+import { Base, CHECK_RAMP, clamp01, SHUTTLE_BAND } from "./base";
+import { DirectionalValve } from "./directional-valve";
+import { BAR, conductanceFromNominal, fromBarGauge, orificeFlow, toBarGauge } from "./flow";
+import { AirMotor, Counter, SuctionCup, Timer, VacuumGenerator } from "./special";
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-
-/** Pressão mínima de pilotagem [Pa acima da atmosfera] para comutar uma válvula. */
-export const PILOT_MIN = 1.5 * BAR;
-/** Faixa (bar) em que a válvula de retenção vai de fechada a aberta. */
-const CHECK_RAMP = 0.05 * BAR;
-/** Faixa de regulagem do regulador de pressão. */
+/** Faixa de regulagem dos reguladores e válvulas de alívio. */
 const REGULATOR_BAND = 0.15 * BAR;
 
-const C_SOURCE = conductanceFromNominal(3000);
 const C_SERVICE_UNIT = conductanceFromNominal(1500);
 const C_SILENCER = conductanceFromNominal(800);
 const C_CHECK = conductanceFromNominal(400);
 const C_NEEDLE_FULL = conductanceFromNominal(250);
+const C_LOGIC = conductanceFromNominal(300);
+const C_QUICK_EXHAUST = conductanceFromNominal(1500);
+const C_RELIEF = conductanceFromNominal(600);
 /** Conector solto: ar escapa como por um furo de ~4 mm. */
 export const C_OPEN_PORT = conductanceFromNominal(500);
 
-/** Classe base com parâmetros editáveis em tempo real. */
-abstract class Base implements Element {
-  readonly id: string;
-  protected params: Record<string, ParamValue>;
-  constructor(protected ctx: BuildContext) {
-    this.id = ctx.comp.id;
-    this.params = { ...ctx.comp.params };
-  }
-  setParam(key: string, value: ParamValue) {
-    this.params = { ...this.params, [key]: value };
-  }
-  abstract branches(out: Branch[], rt: Runtime): void;
-  /** O Runtime é opcional para peças cujo estado não depende das pressões. */
-  state(rt?: Runtime): ComponentSimState;
-  state(): ComponentSimState {
-    return {};
-  }
-}
-
-const key = (ctx: BuildContext, portId: string) => `${ctx.comp.id}:${portId}`;
-
-/** Fonte de ar: nó interno com a pressão ajustada, ligado ao conector por um orifício grande. */
+/** Fonte de ar (ou compressor): nó interno com a pressão ajustada, ligado ao conector por um orifício. */
 class AirSource extends Base {
   private readonly inner: number;
   constructor(ctx: BuildContext) {
@@ -58,44 +38,56 @@ class AirSource extends Base {
     this.ctx.setFixedPressure(this.inner, fromBarGauge(num(this.params.pressure, 6)));
   }
   branches(out: Branch[]) {
-    out.push({ a: this.inner, b: this.ctx.net("1"), flow: (pa, pb) => orificeFlow(C_SOURCE, pa, pb), portB: key(this.ctx, "1") });
+    const c = conductanceFromNominal(num(this.params.flow, 3000));
+    out.push({ a: this.inner, b: this.ctx.net("1"), flow: (pa, pb) => orificeFlow(c, pa, pb), portB: this.port("1") });
   }
 }
 
-/** Unidade de conservação: regulador de pressão com alívio (1 → 2). */
-class ServiceUnit extends Base {
+/** Reservatório de ar: só soma volume à rede (os dois conectores são o mesmo ponto). */
+class Reservoir extends Base {
+  branches() {}
+  staticVolumes() {
+    return [{ net: this.ctx.net("1"), volume: num(this.params.volume, 1) / 1000 }];
+  }
+}
+
+/** Regulador de pressão com alívio (1 → 2). Usado também na unidade de conservação. */
+class PressureRegulator extends Base {
   branches(out: Branch[]) {
     const set = fromBarGauge(num(this.params.setPressure, 6));
-    out.push({
-      a: this.ctx.net("1"),
-      b: this.ctx.net("2"),
-      flow: (pa, pb) => {
+    out.push(
+      this.between("1", "2", (pa, pb) => {
         const open = clamp01((set - pb) / REGULATOR_BAND);
         return open > 0 && pa > pb ? orificeFlow(C_SERVICE_UNIT * open, pa, pb) : 0;
-      },
-      portA: key(this.ctx, "1"),
-      portB: key(this.ctx, "2"),
-    });
+      }),
+    );
     // Alívio: se a saída passar do ajuste (ex.: ajuste reduzido), o excesso escapa.
-    out.push({
-      a: this.ctx.net("2"),
-      b: this.ctx.atm,
-      flow: (pa, pb) => orificeFlow(C_SERVICE_UNIT * 0.2 * clamp01((pa - set - REGULATOR_BAND) / REGULATOR_BAND), pa, pb),
-      portA: key(this.ctx, "2"),
-    });
+    out.push(
+      this.toAtm("2", (pa, pb) =>
+        orificeFlow(C_SERVICE_UNIT * 0.2 * clamp01((pa - set - REGULATOR_BAND) / REGULATOR_BAND), pa, pb),
+      ),
+    );
+  }
+}
+
+/** Válvula de alívio: abre 1 → 3 quando a pressão passa do ajuste. */
+class ReliefValve extends Base {
+  branches(out: Branch[]) {
+    const set = fromBarGauge(num(this.params.setPressure, 7));
+    out.push(this.between("1", "3", (pa, pb) => orificeFlow(C_RELIEF * clamp01((pa - set) / REGULATOR_BAND), pa, pb)));
   }
 }
 
 class Silencer extends Base {
   branches(out: Branch[]) {
-    out.push({ a: this.ctx.net("1"), b: this.ctx.atm, flow: (pa, pb) => orificeFlow(C_SILENCER, pa, pb), portA: key(this.ctx, "1") });
+    out.push(this.toAtm("1", (pa, pb) => orificeFlow(C_SILENCER, pa, pb)));
   }
 }
 
 class Gauge extends Base {
   branches() {}
-  override state(rt: Runtime): ComponentSimState {
-    return { pressure: toBarGauge(rt.p[this.ctx.net("1")]) };
+  override state(rt?: Runtime): ComponentSimState {
+    return { pressure: toBarGauge(rt!.p[this.ctx.net("1")]) };
   }
 }
 
@@ -103,120 +95,66 @@ class Gauge extends Base {
 class CheckValve extends Base {
   branches(out: Branch[]) {
     const crack = num(this.params.crackingPressure, 0.1) * BAR;
-    out.push({
-      a: this.ctx.net("1"),
-      b: this.ctx.net("2"),
-      flow: (pa, pb) => (pa > pb ? clamp01((pa - pb - crack) / CHECK_RAMP) * orificeFlow(C_CHECK, pa, pb) : 0),
-      portA: key(this.ctx, "1"),
-      portB: key(this.ctx, "2"),
-    });
+    out.push(
+      this.between("1", "2", (pa, pb) => (pa > pb ? clamp01((pa - pb - crack) / CHECK_RAMP) * orificeFlow(C_CHECK, pa, pb) : 0)),
+    );
   }
 }
 
-/** Reguladora de vazão unidirecional: agulha nos dois sentidos + retenção livre de 2 para 1. */
-class FlowControlOneWay extends Base {
-  branches(out: Branch[]) {
-    const c = C_NEEDLE_FULL * clamp01(num(this.params.opening, 50) / 100);
-    const a = this.ctx.net("1");
-    const b = this.ctx.net("2");
-    const ports = { portA: key(this.ctx, "1"), portB: key(this.ctx, "2") };
-    out.push({ a, b, flow: (pa, pb) => orificeFlow(c, pa, pb), ...ports });
-    out.push({
-      a: b,
-      b: a,
-      flow: (pa, pb) => (pa > pb ? clamp01((pa - pb) / CHECK_RAMP) * orificeFlow(C_CHECK, pa, pb) : 0),
-      portA: ports.portB,
-      portB: ports.portA,
-    });
-  }
-}
-
-type ValveSpec = Extract<SimSpec, { kind: "valve" }>;
-
-/**
- * Válvula direcional. O êmbolo tem posição contínua `spool` (0 = quadrado da esquerda).
- * Cada quadrado abre suas vias com um peso que cai a zero no meio do caminho
- * (recobrimento positivo: durante a troca, tudo fecha por um instante).
- */
-class DirectionalValve extends Base {
-  private spool: number;
-  private readonly manual = { left: false, right: false };
-  private readonly last: number;
-
+/** Reguladora de vazão: agulha nos dois sentidos; na unidirecional, mais uma retenção livre de 2 para 1. */
+class FlowControl extends Base {
   constructor(
     ctx: BuildContext,
-    private readonly spec: ValveSpec,
+    private readonly oneWay: boolean,
   ) {
     super(ctx);
-    this.spool = spec.restIndex;
-    this.last = spec.squares.length - 1;
   }
-
-  actuate(side: "left" | "right", active: boolean) {
-    this.manual[side] = active;
-  }
-
-  /** O acionamento deste lado está ativo agora? (mola não conta: ela só age quando nada mais age). */
-  private active(side: "left" | "right", rt: Runtime): boolean {
-    const kind: Actuator = this.spec[side];
-    switch (kind) {
-      case "spring":
-        return false;
-      case "pilot": {
-        const id = this.spec.pilotIds?.[side];
-        return id !== undefined && rt.p[this.ctx.net(id)] - P_ATM > PILOT_MIN;
-      }
-      case "roller":
-        return this.manual[side] || this.rollerTouched(rt);
-      default:
-        // botão, alavanca e solenoide (no solenoide, o clique é o "acionamento manual de emergência")
-        return this.manual[side];
-    }
-  }
-
-  private rollerTouched(rt: Runtime): boolean {
-    const cyl = rt.cylinder(String(this.params.cylinder ?? ""));
-    if (!cyl) return false;
-    const target = (clamp01(num(this.params.position, 100) / 100)) * cyl.stroke;
-    return Math.abs(cyl.position - target) <= 0.002;
-  }
-
-  update(dt: number, rt: Runtime) {
-    const left = this.active("left", rt);
-    const right = this.active("right", rt);
-    let target = this.spool;
-    if (left && !right) target = 0;
-    else if (right && !left) target = this.last;
-    else if (!left && !right) {
-      if (this.spec.right === "spring" && this.spec.left !== "spring") target = this.last;
-      else if (this.spec.left === "spring" && this.spec.right !== "spring") target = 0;
-      else if (this.spec.left === "spring" && this.spec.right === "spring") target = this.last / 2;
-    }
-    // Os dois lados acionados ao mesmo tempo: o êmbolo fica onde está ("sinal preso").
-    const speed = dt / Math.max(0.001, num(this.params.switchTime, 20) / 1000);
-    const delta = target - this.spool;
-    this.spool += Math.abs(delta) <= speed ? delta : Math.sign(delta) * speed;
-  }
-
   branches(out: Branch[]) {
-    const c = conductanceFromNominal(num(this.params.nominalFlow, 500));
-    this.spec.squares.forEach((sq, i) => {
-      const w = clamp01(1 - 2 * Math.abs(this.spool - i));
-      if (w <= 0) return;
-      for (const [from, to] of sq.flows) {
-        out.push({
-          a: this.ctx.net(from),
-          b: this.ctx.net(to),
-          flow: (pa, pb) => orificeFlow(c * w, pa, pb),
-          portA: key(this.ctx, from),
-          portB: key(this.ctx, to),
-        });
-      }
-    });
+    const c = C_NEEDLE_FULL * clamp01(num(this.params.opening, 50) / 100);
+    out.push(this.between("1", "2", (pa, pb) => orificeFlow(c, pa, pb)));
+    if (this.oneWay) {
+      out.push(this.between("2", "1", (pa, pb) => (pa > pb ? clamp01((pa - pb) / CHECK_RAMP) * orificeFlow(C_CHECK, pa, pb) : 0)));
+    }
   }
+}
 
-  override state(): ComponentSimState {
-    return { spool: this.spool, pressed: { ...this.manual } };
+/**
+ * Válvulas com "bolinha" que compara as duas entradas (1a e 1b):
+ * - E (simultaneidade): a saída 2 fica ligada à entrada de MENOR pressão;
+ * - OU (alternadora): a saída 2 fica ligada à entrada de MAIOR pressão.
+ * A posição da bolinha é calculada no início do passo, com as pressões atuais.
+ */
+class ShuttleValve extends Base {
+  private towardA = 0.5;
+  constructor(
+    ctx: BuildContext,
+    private readonly and: boolean,
+  ) {
+    super(ctx);
+  }
+  update(_dt: number, rt: Runtime) {
+    const pa = rt.p[this.ctx.net("1a")];
+    const pb = rt.p[this.ctx.net("1b")];
+    const diff = this.and ? pb - pa : pa - pb;
+    this.towardA = clamp01(diff / SHUTTLE_BAND + 0.5);
+  }
+  branches(out: Branch[]) {
+    const wa = this.towardA;
+    if (wa > 0) out.push(this.between("1a", "2", (pa, pb) => orificeFlow(C_LOGIC * wa, pa, pb)));
+    if (wa < 1) out.push(this.between("1b", "2", (pa, pb) => orificeFlow(C_LOGIC * (1 - wa), pa, pb)));
+  }
+}
+
+/** Escape rápido: 1 alimenta 2; quando 1 perde pressão, 2 descarrega direto por 3. */
+class QuickExhaust extends Base {
+  private forward = 1;
+  update(_dt: number, rt: Runtime) {
+    this.forward = clamp01((rt.p[this.ctx.net("1")] - rt.p[this.ctx.net("2")]) / SHUTTLE_BAND + 0.5);
+  }
+  branches(out: Branch[]) {
+    const f = this.forward;
+    if (f > 0) out.push(this.between("1", "2", (pa, pb) => orificeFlow(C_LOGIC * f, pa, pb)));
+    if (f < 1) out.push(this.between("2", "3", (pa, pb) => orificeFlow(C_QUICK_EXHAUST * (1 - f), pa, pb)));
   }
 }
 
@@ -226,12 +164,18 @@ export class OpenPortVent implements Element {
   constructor(
     private readonly node: number,
     private readonly atm: number,
-    private readonly port: string,
+    readonly port: string,
+    readonly exhaust: boolean,
   ) {
     this.id = `vent:${port}`;
   }
+  /** Vazão [kg/s] escapando agora (para o aviso de vazamento). */
+  leak(p: Float64Array) {
+    return orificeFlow(C_OPEN_PORT, p[this.node], p[this.atm]);
+  }
   branches(out: Branch[]) {
-    out.push({ a: this.node, b: this.atm, flow: (pa, pb) => orificeFlow(C_OPEN_PORT, pa, pb), portA: this.port });
+    // Sem portA: a vazão no conector é a da própria peça (o escape está "do lado de fora").
+    out.push({ a: this.node, b: this.atm, flow: (pa, pb) => orificeFlow(C_OPEN_PORT, pa, pb) });
   }
   setParam() {}
   state() {
@@ -245,8 +189,13 @@ export function createPneumaticElement(ctx: BuildContext): Element | null {
   switch (spec.kind) {
     case "air-source":
       return new AirSource(ctx);
+    case "reservoir":
+      return new Reservoir(ctx);
     case "service-unit":
-      return new ServiceUnit(ctx);
+    case "pressure-regulator":
+      return new PressureRegulator(ctx);
+    case "relief-valve":
+      return new ReliefValve(ctx);
     case "silencer":
       return new Silencer(ctx);
     case "gauge":
@@ -254,9 +203,27 @@ export function createPneumaticElement(ctx: BuildContext): Element | null {
     case "check-valve":
       return new CheckValve(ctx);
     case "flow-control-one-way":
-      return new FlowControlOneWay(ctx);
+      return new FlowControl(ctx, true);
+    case "flow-control-two-way":
+      return new FlowControl(ctx, false);
+    case "and-valve":
+      return new ShuttleValve(ctx, true);
+    case "or-valve":
+      return new ShuttleValve(ctx, false);
+    case "quick-exhaust":
+      return new QuickExhaust(ctx);
     case "valve":
       return new DirectionalValve(ctx, spec);
+    case "timer":
+      return new Timer(ctx, spec.mode);
+    case "counter":
+      return new Counter(ctx);
+    case "air-motor":
+      return new AirMotor(ctx);
+    case "vacuum-generator":
+      return new VacuumGenerator(ctx);
+    case "suction-cup":
+      return new SuctionCup(ctx);
     default:
       return null;
   }

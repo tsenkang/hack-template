@@ -131,3 +131,19 @@ describe("linhas", () => {
     expect(s().selection).toContain(copy.from.componentId);
   });
 });
+
+describe("inserir sobre linha", () => {
+  it("a linha vira duas passando pela peça nova, em um passo de desfazer", () => {
+    const a = s().addComponent("pneu.source.air", { x: 0, y: 0 })!;
+    const b = s().addComponent("pneu.gauge.pressure", { x: 0, y: 300 })!;
+    const w = s().addConnection({ componentId: a, portId: "1" }, { componentId: b, portId: "1" })!;
+    const id = s().insertOnWire("pneu.check-valve", { x: 0, y: 150, rotation: 90 }, w, ["1", "2"])!;
+    const wires = selectActiveCircuit(s()).connections;
+    expect(wires).toHaveLength(2);
+    expect(wires[0]).toMatchObject({ from: { componentId: a }, to: { componentId: id, portId: "1" } });
+    expect(wires[1]).toMatchObject({ from: { componentId: id, portId: "2" }, to: { componentId: b } });
+    s().undo();
+    expect(selectActiveCircuit(s()).connections).toHaveLength(1);
+    expect(selectActiveCircuit(s()).components).toHaveLength(2);
+  });
+});

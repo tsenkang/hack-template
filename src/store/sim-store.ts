@@ -13,6 +13,40 @@ import { toast } from "./toast-store";
 
 export type SimStatus = "stopped" | "running" | "paused";
 
+/**
+ * Histórico do avanço de cada cilindro, para o diagrama de fases.
+ * Fica fora do estado do Zustand (muda a cada quadro); a tela observa `historyVersion`.
+ */
+export interface MotionHistory {
+  t: number[];
+  series: Record<string, number[]>;
+}
+export const motionHistory: MotionHistory = { t: [], series: {} };
+/** Intervalo mínimo entre amostras [s de simulação] e tamanho máximo do histórico. */
+const SAMPLE_DT = 0.01;
+const HISTORY_MAX = 6000;
+
+function recordHistory(snap: SimSnapshot) {
+  const h = motionHistory;
+  const last = h.t[h.t.length - 1];
+  if (last !== undefined && snap.time - last < SAMPLE_DT) return false;
+  h.t.push(snap.time);
+  for (const [id, st] of Object.entries(snap.components)) {
+    if (st.extension === undefined) continue;
+    (h.series[id] ??= new Array(h.t.length - 1).fill(st.extension)).push(st.extension);
+  }
+  if (h.t.length > HISTORY_MAX) {
+    h.t.splice(0, h.t.length - HISTORY_MAX);
+    for (const s of Object.values(h.series)) s.splice(0, s.length - HISTORY_MAX);
+  }
+  return true;
+}
+
+function clearHistory() {
+  motionHistory.t = [];
+  motionHistory.series = {};
+}
+
 /** Quanto o botão "avançar um passo" anda no tempo [s]. */
 export const STEP_SECONDS = 0.01;
 export const SPEEDS = [0.1, 0.25, 0.5, 1, 2, 5, 10] as const;
@@ -22,6 +56,8 @@ interface SimState {
   speed: number;
   snapshot: SimSnapshot | null;
   lagging: boolean;
+  /** Muda quando o histórico do diagrama de fases ganha amostras novas. */
+  historyVersion: number;
   start(): void;
   pause(): void;
   stop(): void;
@@ -67,6 +103,9 @@ function stabilize(prev: SimSnapshot | null, next: SimSnapshot): SimSnapshot {
     const old = prev.wires[id];
     if (old && sameWire(old, st)) next.wires[id] = old;
   }
+  // Avisos só mudam de identidade quando a lista muda (valores arredondados).
+  const sig = (s: SimSnapshot) => s.warnings.map((w) => `${w.componentId}${w.code}${w.port}${Math.round(w.value ?? 0)}`).join("|");
+  if (sig(prev) === sig(next)) next.warnings = prev.warnings;
   return next;
 }
 
@@ -78,7 +117,12 @@ export const useSim = create<SimState>()((set, get) => {
       const msg = e.data;
       if (msg.type === "snapshot") {
         if (get().status === "stopped") return;
-        set({ snapshot: stabilize(get().snapshot, msg.snapshot), lagging: msg.lagging });
+        const grew = recordHistory(msg.snapshot);
+        set({
+          snapshot: stabilize(get().snapshot, msg.snapshot),
+          lagging: msg.lagging,
+          ...(grew ? { historyVersion: get().historyVersion + 1 } : {}),
+        });
       } else {
         toast(msg.message, "error");
         get().stop();
@@ -93,11 +137,13 @@ export const useSim = create<SimState>()((set, get) => {
     speed: 1,
     snapshot: null,
     lagging: false,
+    historyVersion: 0,
 
     start() {
       const { status } = get();
       if (status === "running") return;
       if (status === "stopped") {
+        clearHistory();
         useEditor.getState().select([]);
         boot();
       }
@@ -116,6 +162,7 @@ export const useSim = create<SimState>()((set, get) => {
     },
     step() {
       if (get().status === "stopped") {
+        clearHistory();
         useEditor.getState().select([]);
         boot();
       }
