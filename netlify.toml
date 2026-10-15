@@ -1,0 +1,16 @@
+# Publicação na Netlify: a cada push na `main` o site é construído e publicado.
+# Em cada Pull Request a Netlify cria um link de pré-visualização.
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # O site é estático (output: 'export'); o adaptador Next.js da Netlify não é necessário.
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
+
+# Arquivos com hash no nome nunca mudam: cache longo.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

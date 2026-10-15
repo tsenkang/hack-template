@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Cores do tema. Os símbolos (classes .sym*) e a interface usam só estes tokens,
+ * então trocar de tema claro/escuro não exige mexer nos componentes.
+ */
+:root {
+  --app-bg: #f3f4f6;
+  --panel: #ffffff;
+  --border: #e1e4ea;
+  --text: #1b2230;
+  --text-muted: #566070;
+  --accent: #1a66d6;
+  --accent-soft: #e5effc;
+  --hover: #eef1f5;
+  --danger: #c62828;
+  --canvas-bg: #fbfbfc;
+  --grid-dot: #c3c9d3;
+  --grid-line: #e9ecf1;
+  --sym-stroke: #1f2937;
+  --sym-bg: #ffffff;
+  --port-pneumatic: #1a66d6;
+  --port-hydraulic: #c2410c;
+  --port-pilot: #1a66d6;
+  --port-electric: #b91c1c;
+  color-scheme: light;
+}
+
+.dark {
+  --app-bg: #0e1117;
+  --panel: #161a22;
+  --border: #2a303b;
+  --text: #e6e9ef;
+  --text-muted: #9ba4b3;
+  --accent: #5b9dff;
+  --accent-soft: #1b2a44;
+  --hover: #222834;
+  --danger: #f87171;
+  --canvas-bg: #11141b;
+  --grid-dot: #2f3542;
+  --grid-line: #1a1f28;
+  --sym-stroke: #d5dbe5;
+  --sym-bg: #11141b;
+  --port-pneumatic: #5b9dff;
+  --port-hydraulic: #fb923c;
+  --port-pilot: #5b9dff;
+  --port-electric: #f87171;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-app: var(--app-bg);
+  --color-panel: var(--panel);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-hover: var(--hover);
+  --color-danger: var(--danger);
+  --color-canvas: var(--canvas-bg);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--app-bg);
+  color: var(--text);
+}
+
+/* ---------- Símbolos ---------- */
+.sym {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sym-bg {
+  fill: var(--sym-bg);
+}
+.sym-solid {
+  fill: var(--sym-stroke);
+}
+.sym-dashed {
+  stroke-dasharray: 4 3;
+}
+.sym-text {
+  fill: var(--sym-stroke);
+  font-family: var(--font-sans);
+}
+
+/* ---------- Área de desenho ---------- */
+.grid-dot {
+  fill: var(--grid-dot);
+}
+.grid-line {
+  fill: none;
+  stroke: var(--grid-line);
+  stroke-width: 1;
+}
+.component {
+  cursor: move;
+}
+.component .hit {
+  fill: transparent;
+}
+.component .label {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  pointer-events: none;
+}
+.component .port {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.component:hover .port,
+.component[aria-pressed="true"] .port {
+  opacity: 1;
+}
+.port-hit {
+  fill: transparent;
+}
+.port-dot {
+  stroke: var(--panel);
+  stroke-width: 1;
+}
+.port-pneumatic { fill: var(--port-pneumatic); }
+.port-hydraulic { fill: var(--port-hydraulic); }
+.port-pilot { fill: var(--port-pilot); }
+.port-electric { fill: var(--port-electric); }
+.selection-outline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.marquee {
+  fill: color-mix(in srgb, var(--accent) 10%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

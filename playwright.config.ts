@@ -1,0 +1,24 @@
+import { defineConfig, devices } from "@playwright/test";
+
+// Os testes de tela rodam contra o build de produção (pasta out/), igual ao site publicado.
+export default defineConfig({
+  testDir: "e2e",
+  fullyParallel: true,
+  retries: process.env.CI ? 1 : 0,
+  use: { baseURL: "http://localhost:4173", trace: "retain-on-failure" },
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Permite usar um Chromium já instalado na máquina (ex.: PW_CHROMIUM_PATH=/opt/...).
+        launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+      },
+    },
+  ],
+  webServer: {
+    command: "npx serve out -l 4173 --no-clipboard",
+    url: "http://localhost:4173",
+    reuseExistingServer: !process.env.CI,
+  },
+});

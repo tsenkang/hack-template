@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 0 — Planejamento** concluída. Aguardando OK para iniciar a Fase 1.
+> Status: **Fase 1 — Base** concluída. Aguardando OK para iniciar a Fase 2.
 
 ---
 
@@ -150,5 +150,17 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 
 ---
 
-## 6. Próximo passo
-Com o OK do usuário: **Fase 1 — Base**.
+## 6. Registro das fases
+
+### Fase 1 — Base ✅
+- Projeto Next.js 16 (export estático) + React 19 + Tailwind 4 + Zustand + Vitest + Playwright, com `netlify.toml` e CI no GitHub Actions.
+- Tela em 4 áreas + painel de baixo: barra de cima, biblioteca com busca (sem depender de acento), área de desenho e painel de propriedades com explicação de cada campo.
+- Área de desenho: grade com ímã, zoom na roda do mouse/pinça, mover a tela (espaço + arrastar, botão do meio ou um dedo), seleção por clique, Shift e retângulo, mover arrastando, copiar/colar/duplicar, girar, espelhar, alinhar, mover com as setas.
+- **29 peças com símbolo próprio** (pneumáticas, hidráulicas e elétricas), ainda sem simulação. As válvulas e os cilindros são gerados a partir de dados.
+- Abas de circuitos, desfazer/refazer (um arraste = 1 passo), salvamento automático no IndexedDB, abrir projetos salvos, importar/exportar `.json` versionado, exportar SVG/PNG, tema claro/escuro, lista de peças.
+- Testes: 79 unitários (geometria, editor, formato de arquivo, biblioteca) + 9 de tela.
+- Antecipados de outras fases, porque saíram baratos: exportar SVG/PNG (Fase 7) e pinça/arraste no toque (Fase 7, versão básica).
+- Ficou para a Fase 2: ligar linhas entre conectores (o modelo `Connection` já existe) e os controles da simulação, que já aparecem na barra mas estão desativados.
+
+## 7. Próximo passo
+Com o OK do usuário: **Fase 2 — Pneumática simples**.
