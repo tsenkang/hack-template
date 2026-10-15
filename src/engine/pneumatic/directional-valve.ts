@@ -84,8 +84,13 @@ export class DirectionalValve extends Base {
         return this.manual[side] || this.nearCylinder(rt, ONEWAY_TOLERANCE, this.params.direction === "return" ? "return" : "advance");
       case "proximity":
         return this.nearCylinder(rt, PROXIMITY_TOLERANCE);
+      case "solenoid": {
+        // Bobina energizada pelo circuito elétrico, ou o clique (acionamento manual de emergência).
+        const label = String(this.params[side === "left" ? "solenoidLeft" : "solenoidRight"] ?? "");
+        return this.manual[side] || rt.solenoid(label);
+      }
       default:
-        // botão, pedal, alavanca e solenoide (no solenoide, o clique é o "acionamento manual de emergência")
+        // botão, pedal e alavanca
         return this.manual[side];
     }
   }

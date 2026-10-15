@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 3 — Pneumática completa** concluída. Aguardando OK para iniciar a Fase 4.
+> Status: **Fase 4 — Elétrica** concluída. Aguardando OK para iniciar a Fase 5.
 
 ---
 
@@ -221,5 +221,43 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - O **pressostato** foi para a Fase 4, porque ele gera um sinal elétrico. A válvula de sequência cobre o caso pneumático.
 - **Cruzamento sem ligação** não virou peça: linhas que se cruzam não se ligam, e o ponto cheio só aparece onde as linhas realmente se juntam (num conector ou no ponto de ligação T).
 
+### Fase 4 — Elétrica ✅
+- **33 peças elétricas** (IEC 60617):
+  - fontes: +24 V / 0 V e fase / neutro (220 V);
+  - comandos: botões NA e NF, botão com trava, emergência (cogumelo com trava), seletoras de 2 e 3 posições;
+  - contatos de relé: NA, NF e reversor;
+  - fins de curso mecânicos NA e NF; sensores indutivo, capacitivo, óptico e magnético (reed); pressostato com conector pneumático;
+  - bobinas: relé, contator, solenoide de válvula, relés temporizados (retardo na ligação e no desligamento), contador e reset do contador;
+  - saídas: lâmpada (4 cores) e buzina;
+  - proteção e componentes: fusível, disjuntor, diodo e resistor.
+- **Motor elétrico** (`src/engine/electric`): tensões e correntes por análise nodal.
+  - Cada carga tem sua resistência nominal; contato fechado vale 0,01 Ω; diodos e fusíveis são resolvidos por iteração.
+  - O relé atraca no passo seguinte, como na realidade; assim, selo e intertravamento funcionam sem laços infinitos.
+  - Temporizadores, contadores e solenoides são ligados pelo rótulo (K1, C1, Y1).
+  - **Curto-circuito**: o fusível no caminho queima (clique para trocar); sem fusível, a fonte desliga e aparece o aviso.
+  - Aviso de **sobretensão** (ex.: lâmpada de 24 V ligada em 220 V).
+- **Eletropneumática**:
+  - a válvula com solenoide ganha o rótulo Y1, Y2… (numerado sozinho);
+  - a bobina elétrica com o mesmo rótulo aciona a válvula;
+  - sensores e fins de curso leem a posição da haste;
+  - o pressostato lê a pressão da rede de ar.
+- **Na tela**:
+  - contatos abrem e fecham no desenho, bobinas energizadas ficam laranja e lâmpadas acendem na cor escolhida;
+  - fios com corrente ficam vermelhos com traços andando; fios só com tensão ficam vermelho-claro.
+  - **Esquema em escada**: as colunas de corrente são numeradas sozinhas, e cada bobina de relé mostra ao lado a tabela das colunas onde estão os contatos NA e NF dela.
+  - A legenda da simulação virou uma faixa fixa abaixo das abas: continua sempre visível e não cobre mais o circuito, o que o teste de tela mostrou ser um problema em telas menores.
+- **Detector de erros**: circuito elétrico sem fonte, contato sem bobina correspondente, solenoide sem válvula, válvula com solenoide sem bobina (dica) e rótulo de bobina repetido.
+- **Testes**: 253 unitários, incluindo:
+  - lâmpada, **selo**, **intertravamento**, relé temporizado (±5%), contador com reset;
+  - **curto-circuito** com e sem fusível, emergência, diodo, sobretensão;
+  - circuito eletropneumático completo (botão → Y1 → válvula → cilindro → sensor reed → lâmpada; pressostato).
+
+  E 17 de tela, incluindo selo + solenoide + sensor num projeto de exemplo (`e2e/fixtures/electro-seal.json`).
+
+**Decisões da Fase 4**
+- **Sensores com dois fios**: indutivo, capacitivo e óptico foram modelados como um contato NA, em vez de 3 fios (+, 0, sinal). Fica mais simples para o aluno e o comportamento lógico é o mesmo. Se a escola quiser treinar a ligação de 3 fios (PNP/NPN), dá para acrescentar depois.
+- **Corrente alternada**: 220 V CA é tratada pelo valor eficaz, o que basta para o comando: liga/desliga, sobretensão e curto.
+- **Um clique rápido nunca se perde**: um botão apertado e solto entre dois passos fica apertado por pelo menos um passo da simulação.
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 4 — Elétrica** (botões, relés, selo, temporizadores e contadores elétricos, sensores, pressostato, eletropneumática funcionando e diagrama em escada).
+Com o OK do usuário: **Fase 5 — Hidráulica** (bomba, tanque, alívio, cilindros e motores, 4/3 com todos os centros, válvulas de pressão e vazão, acumulador e eletro-hidráulica).

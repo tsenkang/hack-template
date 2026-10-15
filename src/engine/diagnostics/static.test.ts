@@ -43,4 +43,24 @@ describe("detector de erros (estático)", () => {
     c.add("pneu.cylinder.single-acting", {}, "1A1");
     expect(codes(c).filter((k) => k.startsWith("duplicate-label"))).toHaveLength(2);
   });
+
+  it("elétrica: sem fonte, contato sem bobina e solenoide sem válvula", () => {
+    const c = new TestCircuit();
+    c.add("elec.relay.contact-no", {}, "K7");
+    c.add("elec.solenoid.coil", {}, "Y9");
+    const list = codes(c);
+    expect(list).toContain("no-elec-supply:");
+    expect(list).toContain("unknown-coil:");
+    expect(list).toContain("unknown-solenoid:");
+  });
+
+  it("válvula com solenoide e bobina com o mesmo rótulo: sem aviso de solenoide", () => {
+    const c = new TestCircuit();
+    c.add("elec.supply.24v");
+    c.add("pneu.source.air");
+    c.add("pneu.valve.5-2.solenoid-spring");
+    c.add("elec.solenoid.coil", {}, "Y1");
+    const list = codes(c);
+    expect(list.filter((k) => k.includes("solenoid"))).toEqual([]);
+  });
 });

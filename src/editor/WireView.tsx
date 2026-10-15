@@ -11,6 +11,19 @@ export const PRESSURE_ON = 0.2;
 /** Pressão de referência para a cor mais forte. */
 const PRESSURE_FULL = 6;
 
+/** Fio "vivo": tensão acima disto [V]; com corrente: acima disto [mA]. */
+const LIVE_VOLTS = 1;
+const CURRENT_MA = 1;
+
+/** Velocidade da animação da corrente nos fios, pela intensidade [mA]. */
+function currentDuration(mA: number): number | null {
+  const i = Math.abs(mA);
+  if (i < CURRENT_MA) return null;
+  if (i < 100) return 1.2;
+  if (i < 500) return 0.7;
+  return 0.4;
+}
+
 /**
  * Velocidade da animação do fluxo, em faixas (só muda a animação quando muda de faixa,
  * para o movimento não "pular" a cada quadro). Retorna a duração de um ciclo em segundos.
@@ -32,6 +45,8 @@ interface Props {
   traced: boolean;
   /** Linha de comando (piloto): tracejada. */
   pilot: boolean;
+  /** Fio elétrico (estado = tensão em V e corrente em mA). */
+  electric: boolean;
   state?: WireSimState;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
 }
@@ -41,8 +56,30 @@ interface Props {
  * mostram para onde o ar anda. A forma da linha (espessura, tracejado) também
  * muda, para não depender só da cor.
  */
-export const WireView = memo(function WireView({ id, points, selected, traced, pilot, state, onPointerDown }: Props) {
+export const WireView = memo(function WireView({ id, points, selected, traced, pilot, electric, state, onPointerDown }: Props) {
   const d = pointsToPath(points);
+  if (electric) {
+    const live = state !== undefined && Math.abs(state.p) > LIVE_VOLTS;
+    const duration = state ? currentDuration(state.q) : null;
+    return (
+      <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
+        <path className="wire-hit" d={d} />
+        {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
+        <path
+          className={clsx("wire", state && (duration !== null ? "wire-current" : live ? "wire-live" : "wire-empty-elec"))}
+          d={d}
+        />
+        {duration !== null && (
+          <path
+            className={clsx("wire-flow", state!.q < 0 && "reverse")}
+            style={{ animationDuration: `${duration}s` }}
+            d={d}
+            data-export-ignore
+          />
+        )}
+      </g>
+    );
+  }
   const pressurized = state !== undefined && state.p > PRESSURE_ON;
   const level = state ? Math.min(1, Math.max(0, state.p / PRESSURE_FULL)) : 0;
   const duration = state ? flowDuration(state.q) : null;

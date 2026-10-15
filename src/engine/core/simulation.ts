@@ -4,10 +4,12 @@
  * nos testes (Vitest).
  *
  * Cada passo:
+ *  0. rede elétrica: contatos, bobinas, solenoides (usa posições e pressões do passo anterior);
  *  1. peças atualizam o estado interno (êmbolo das válvulas, roletes);
  *  2. mecânica em subpassos: cilindros se movem e o ar das câmaras é comprimido/expandido;
  *  3. rede de ar resolvida de forma implícita (pressões e vazões).
  */
+import { ElectricNetwork } from "../electric/network";
 import { Cylinder } from "../mechanics/cylinder";
 import { createPneumaticElement, OpenPortVent } from "../pneumatic/elements";
 import { massToLmin, P_ATM, RT, toBarGauge } from "../pneumatic/flow";
@@ -39,6 +41,7 @@ export class Simulation {
   private readonly byId = new Map<string, Element>();
   private readonly work: NetworkWork;
   private readonly runtime: Runtime;
+  private readonly electric: ElectricNetwork;
   private branches: Branch[] = [];
   private flows: Float64Array = new Float64Array(0);
 
@@ -95,9 +98,11 @@ export class Simulation {
     for (const el of this.elements) for (const v of el.staticVolumes?.() ?? []) this.baseVolume[v.net] += v.volume;
 
     const cylinders = new Map(this.mechanical.map((m) => [m.label, m]));
+    this.electric = new ElectricNetwork(circuit, (k) => this.portNet.get(k));
     this.runtime = {
       p: this.p,
       cylinder: (label) => cylinders.get(label),
+      solenoid: (label) => this.electric.solenoid(label),
     };
     this.updateVolumes();
   }
@@ -109,6 +114,7 @@ export class Simulation {
 
   step(dt = DT) {
     const rt = this.runtime;
+    this.electric.update(dt, rt);
     for (const el of this.elements) el.update?.(dt, rt);
 
     if (this.mechanical.length) {
@@ -136,6 +142,11 @@ export class Simulation {
   }
 
   command(cmd: SimCommand) {
+    if (this.electric.has(cmd.id)) {
+      if (cmd.type === "actuate") this.electric.actuate(cmd.id, cmd.side, cmd.active);
+      else this.electric.setParam(cmd.id, cmd.key, cmd.value);
+      return;
+    }
     const el = this.byId.get(cmd.id);
     if (!el) return;
     if (cmd.type === "actuate") el.actuate?.(cmd.side, cmd.active);
@@ -165,11 +176,14 @@ export class Simulation {
 
     const wires: SimSnapshot["wires"] = {};
     for (const w of this.circuit.wires) {
+      if (w.electric) continue;
       const net = this.portNet.get(w.from)!;
       const q = ((portFlow.get(w.from) ?? 0) - (portFlow.get(w.to) ?? 0)) / 2;
       wires[w.id] = { p: toBarGauge(this.p[net]), q: massToLmin(q) };
     }
-    return { time: this.time, components, wires, ports, warnings: this.collectWarnings(ports) };
+    Object.assign(components, this.electric.states());
+    Object.assign(wires, this.electric.wireStates());
+    return { time: this.time, components, wires, ports, warnings: [...this.electric.warnings(), ...this.collectWarnings(ports)] };
   }
 
   /** Avisos do instante atual: sobrepressão, sinal preso e ar escapando por conector solto. */

@@ -10,6 +10,7 @@ import { getDef } from "@/symbols/registry";
 import { GRID } from "@/symbols/types";
 import { CanvasControls } from "./CanvasControls";
 import { DiagnosticMarkers } from "./DiagnosticMarkers";
+import { LadderAnnotations } from "./LadderAnnotations";
 import { ComponentNode } from "./ComponentNode";
 import {
   componentBounds,
@@ -23,7 +24,6 @@ import {
   type Viewport,
 } from "./geometry";
 import { routeOrthogonal, simplify } from "./routing";
-import { SimLegend } from "./SimLegend";
 import { WireView } from "./WireView";
 import {
   allPorts,
@@ -86,6 +86,7 @@ export function Canvas() {
     const openPorts = new Map<string, string>();
     const junctions: Point[] = [];
     const pilotWires = new Set<string>();
+    const electricWires = new Set<string>();
     for (const comp of circuit.components) {
       const def = getDef(comp.type);
       if (!def) continue;
@@ -97,8 +98,9 @@ export function Canvas() {
     );
     for (const w of circuit.connections) {
       if (kindOf.get(portKey(w.from)) === "pilot" || kindOf.get(portKey(w.to)) === "pilot") pilotWires.add(w.id);
+      if (kindOf.get(portKey(w.from)) === "electric") electricWires.add(w.id);
     }
-    return { openPorts, junctions, pilotWires, nets: wireNets(circuit) };
+    return { openPorts, junctions, pilotWires, electricWires, nets: wireNets(circuit) };
   }, [circuit]);
 
   /** Rastro do sinal: com uma linha selecionada, destaca todas as linhas ligadas a ela. */
@@ -183,6 +185,11 @@ export function Canvas() {
           const r = localToWorld(comp, def, { x: def.width - 15, y: def.height / 2 });
           side = Math.hypot(click.x - l.x, click.y - l.y) <= Math.hypot(click.x - r.x, click.y - r.y) ? "left" : "right";
         } else side = leftManual ? "left" : "right";
+      } else {
+        // Outras peças (ex.: seletora de 3 posições): o lado é o lado do clique.
+        const click = screenToWorld(selectViewport(s), local(e));
+        const b = componentBounds(comp, def);
+        side = click.x < b.x + b.w / 2 ? "left" : "right";
       }
       useSim.getState().actuate(id, side, true);
       held.current = { id, side };
@@ -436,6 +443,7 @@ export function Canvas() {
                   selected={selected.has(w.id)}
                   traced={traced.has(w.id)}
                   pilot={topology.pilotWires.has(w.id)}
+                  electric={topology.electricWires.has(w.id)}
                   state={snapshot?.wires[w.id]}
                   onPointerDown={onWirePointerDown}
                 />
@@ -454,6 +462,7 @@ export function Canvas() {
               onPortPointerDown={onPortPointerDown}
             />
           ))}
+          <LadderAnnotations />
           <DiagnosticMarkers />
           {topology.junctions.map((p) => (
             <circle key={`${p.x},${p.y}`} className="junction-dot" cx={p.x} cy={p.y} r={2.6} />
@@ -486,7 +495,6 @@ export function Canvas() {
         </div>
       )}
 
-      {simulating && <SimLegend />}
       <CanvasControls snapEnabled={snapEnabled} zoomOnly={simulating} />
     </div>
   );

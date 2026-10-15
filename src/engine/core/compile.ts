@@ -4,7 +4,7 @@
  * Todas as abas do projeto são simuladas juntas.
  */
 import type { SimCircuit, SimComponent, SimSpec } from "./sim-types";
-import { internalPorts, portKey } from "./sim-types";
+import { internalPorts, isElectric, portKey } from "./sim-types";
 import type { Project } from "./types";
 
 /** O que o compilador precisa saber de cada tipo de peça. */
@@ -30,9 +30,27 @@ class UnionFind {
   }
 }
 
+/** Agrupa conectores em redes, a partir dos grupos já unidos. */
+function buildNets(keys: Iterable<string>, uf: UnionFind) {
+  const index = new Map<string, number>();
+  const nets: SimCircuit["nets"] = [];
+  for (const k of keys) {
+    const root = uf.find(k);
+    let i = index.get(root);
+    if (i === undefined) {
+      i = nets.length;
+      index.set(root, i);
+      nets.push({ ports: [], wires: [] });
+    }
+    nets[i].ports.push(k);
+  }
+  return { nets, netOf: (k: string) => index.get(uf.find(k))! };
+}
+
 export function compileProject(project: Project, lookup: (type: string) => PartInfo | undefined): SimCircuit {
   const components: SimComponent[] = [];
   const known = new Set<string>();
+  const knownElec = new Set<string>();
   const uf = new UnionFind();
 
   for (const circuit of project.circuits) {
@@ -40,7 +58,8 @@ export function compileProject(project: Project, lookup: (type: string) => PartI
       const info = lookup(comp.type);
       if (!info?.sim) continue;
       const spec = info.sim;
-      const closedWhenOpen = spec.kind === "gauge" || spec.kind === "suction-cup";
+      // Manômetro, ventosa e pressostato só "sentem" a pressão: conector solto fica fechado.
+      const closedWhenOpen = spec.kind === "gauge" || spec.kind === "suction-cup" || isElectric(spec);
       const ports = [
         ...info.ports
           .filter((p) => p.kind === "pneumatic" || p.kind === "pilot")
@@ -48,11 +67,13 @@ export function compileProject(project: Project, lookup: (type: string) => PartI
         ...internalPorts(spec).map((id) => ({ id, ventsWhenOpen: false, exhaust: false })),
       ];
       for (const p of ports) known.add(portKey(comp.id, p.id));
+      const elecPorts = info.ports.filter((p) => p.kind === "electric").map((p) => p.id);
+      for (const id of elecPorts) knownElec.add(portKey(comp.id, id));
       // Ponto de ligação e reservatório: todos os conectores são o mesmo ponto.
       if (spec.kind === "junction" || spec.kind === "reservoir") {
         for (const p of ports.slice(1)) uf.union(portKey(comp.id, ports[0].id), portKey(comp.id, p.id));
       }
-      components.push({ id: comp.id, label: comp.label, spec, params: { ...comp.params }, ports });
+      components.push({ id: comp.id, label: comp.label, spec, params: { ...comp.params }, ports, elecPorts });
     }
   }
 
@@ -61,25 +82,19 @@ export function compileProject(project: Project, lookup: (type: string) => PartI
     for (const w of circuit.connections) {
       const from = portKey(w.from.componentId, w.from.portId);
       const to = portKey(w.to.componentId, w.to.portId);
-      if (!known.has(from) || !known.has(to)) continue;
+      const electric = knownElec.has(from) && knownElec.has(to);
+      if (!electric && (!known.has(from) || !known.has(to))) continue;
       uf.union(from, to);
-      wires.push({ id: w.id, from, to });
+      wires.push({ id: w.id, from, to, electric });
     }
   }
 
-  const netIndex = new Map<string, number>();
-  const nets: SimCircuit["nets"] = [];
-  for (const k of known) {
-    const root = uf.find(k);
-    let i = netIndex.get(root);
-    if (i === undefined) {
-      i = nets.length;
-      netIndex.set(root, i);
-      nets.push({ ports: [], wires: [] });
-    }
-    nets[i].ports.push(k);
+  const fluid = buildNets(known, uf);
+  const elec = buildNets(knownElec, uf);
+  for (const w of wires) {
+    const target = w.electric ? elec : fluid;
+    target.nets[target.netOf(w.from)].wires.push(w.id);
   }
-  for (const w of wires) nets[netIndex.get(uf.find(w.from))!].wires.push(w.id);
 
-  return { components, nets, wires };
+  return { components, nets: fluid.nets, elecNets: elec.nets, wires };
 }

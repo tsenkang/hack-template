@@ -3,6 +3,7 @@
  * Para adicionar uma peça nova: crie o arquivo do símbolo e inclua-o na lista abaixo.
  */
 import * as electricOutputs from "./electric/outputs";
+import * as electricProtection from "./electric/protection";
 import * as electricSupply from "./electric/supply";
 import * as electricSwitches from "./electric/switches";
 import * as hydCylinders from "./hydraulic/cylinders";
@@ -50,6 +51,7 @@ export const COMPONENT_DEFS: readonly ComponentDef[] = [
   ...Object.values(electricSupply),
   ...Object.values(electricSwitches),
   ...Object.values(electricOutputs),
+  ...Object.values(electricProtection),
 ];
 
 const BY_TYPE = new Map(COMPONENT_DEFS.map((d) => [d.type, d]));

@@ -14,6 +14,7 @@ export const CATEGORIES = [
   { id: "elec-supply", domain: "electric" },
   { id: "elec-switches", domain: "electric" },
   { id: "elec-outputs", domain: "electric" },
+  { id: "elec-protection", domain: "electric" },
 ] as const satisfies readonly { id: string; domain: Domain }[];
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];

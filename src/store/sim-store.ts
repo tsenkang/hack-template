@@ -80,14 +80,27 @@ const lookup = (type: string) => {
 const close = (a: number | undefined, b: number | undefined, eps: number) =>
   a === b || (a !== undefined && b !== undefined && Math.abs(a - b) < eps);
 
+/** Tolerância por campo numérico; os demais campos (booleanos, objetos) comparam exatamente. */
+const TOLERANCE: Partial<Record<keyof ComponentSimState, number>> = {
+  spool: 1e-3,
+  extension: 1e-4,
+  velocity: 1e-3,
+  pressure: 0.01,
+  charge: 0.005,
+  angle: 1,
+  rpm: 1,
+};
+
 function sameComponent(a: ComponentSimState, b: ComponentSimState) {
-  return (
-    close(a.spool, b.spool, 1e-3) &&
-    close(a.extension, b.extension, 1e-4) &&
-    close(a.pressure, b.pressure, 0.01) &&
-    a.pressed?.left === b.pressed?.left &&
-    a.pressed?.right === b.pressed?.right
-  );
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof ComponentSimState>;
+  for (const k of keys) {
+    const x = a[k];
+    const y = b[k];
+    if (typeof x === "number" || typeof y === "number") {
+      if (!close(x as number | undefined, y as number | undefined, TOLERANCE[k] ?? 0)) return false;
+    } else if (JSON.stringify(x) !== JSON.stringify(y)) return false;
+  }
+  return true;
 }
 
 const sameWire = (a: WireSimState, b: WireSimState) => close(a.p, b.p, 0.02) && close(a.q, b.q, 1);

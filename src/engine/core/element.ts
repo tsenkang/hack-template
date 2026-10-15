@@ -9,6 +9,8 @@ export interface Runtime {
   readonly p: Float64Array;
   /** Cilindro com um dado rótulo (para os roletes de fim de curso). Posição [m], velocidade [m/s]. */
   cylinder(label: string): { position: number; stroke: number; velocity: number } | undefined;
+  /** Solenoide de válvula com este rótulo (ex.: "Y1") energizado pelo circuito elétrico. */
+  solenoid(label: string): boolean;
 }
 
 /** O que uma peça recebe ao ser montada. */

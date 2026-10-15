@@ -28,6 +28,10 @@
   --line-pressure: #1d4ed8;
   --line-empty: #93b4e6;
   --line-flow: #ffffff;
+  --elec-active: #dc2626;
+  --elec-energized: #fb923c;
+  --wire-current: #dc2626;
+  --wire-voltage: #f19a9a;
   color-scheme: light;
 }
 
@@ -53,6 +57,10 @@
   --line-pressure: #60a5fa;
   --line-empty: #36507a;
   --line-flow: #0e1117;
+  --elec-active: #f87171;
+  --elec-energized: #f97316;
+  --wire-current: #f87171;
+  --wire-voltage: #7f3b3b;
   color-scheme: dark;
 }
 
@@ -93,6 +101,16 @@ body {
 }
 .sym-dashed {
   stroke-dasharray: 4 3;
+}
+/* Estado elétrico: contato acionado, bobina energizada, falha. */
+.sym-active {
+  stroke: var(--elec-active);
+}
+.sym-energized {
+  fill: var(--elec-energized);
+}
+.sym-danger {
+  stroke: var(--danger);
 }
 .sym-text {
   fill: var(--sym-stroke);
@@ -225,6 +243,19 @@ body {
   stroke: var(--line-empty);
   stroke-width: 1.5;
 }
+/* Fios: com corrente = vermelho forte e grosso; só com tensão = vermelho claro; sem tensão = cinza. */
+.wire-current {
+  stroke: var(--wire-current);
+  stroke-width: 2.4;
+}
+.wire-live {
+  stroke: var(--wire-voltage);
+  stroke-width: 1.6;
+}
+.wire-empty-elec {
+  stroke: var(--text-muted);
+  stroke-width: 1.2;
+}
 .wire-flow {
   fill: none;
   stroke: var(--line-flow);
@@ -273,6 +304,29 @@ body {
   font-family: var(--font-sans);
   font-weight: 700;
   pointer-events: none;
+}
+
+/* ---------- Esquema em escada ---------- */
+.ladder text {
+  font-family: var(--font-sans);
+  pointer-events: none;
+}
+.ladder-number {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.ladder-head {
+  fill: var(--text-muted);
+  font-size: 6px;
+}
+.ladder-ref {
+  fill: var(--text);
+  font-size: 7px;
+}
+.ladder-rule {
+  stroke: var(--text-muted);
+  stroke-width: 0.6;
 }
 
 .junction-dot {

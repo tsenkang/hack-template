@@ -26,9 +26,33 @@ export function nextLabel(project: Project, prefix: string, reserved: Set<string
   return `${prefix}${n}`;
 }
 
+/** Rótulos já usados em parâmetros com numeração automática (ex.: solenoides Y1, Y2 das válvulas). */
+function usedParamLabels(project: Project): Set<string> {
+  const used = new Set<string>();
+  for (const c of project.circuits) {
+    for (const comp of c.components) {
+      for (const p of getDef(comp.type)?.params ?? []) {
+        if (p.type === "text" && p.autoLabel && typeof comp.params[p.key] === "string") used.add(comp.params[p.key] as string);
+      }
+    }
+  }
+  return used;
+}
+
 export function createInstance(project: Project, type: string, x: number, y: number): ComponentInstance {
   const def = getDef(type);
   if (!def) throw new Error(`Peça desconhecida: ${type}`);
+  const params = defaultParams(def);
+  const reserved = usedParamLabels(project);
+  for (const p of def.params) {
+    if (p.type === "text" && p.autoLabel) {
+      // Só olha os outros parâmetros (ex.: Y das válvulas), não os rótulos das bobinas que vão ligar neles.
+      let n = 1;
+      while (reserved.has(`${p.autoLabel}${n}`)) n++;
+      params[p.key] = `${p.autoLabel}${n}`;
+      reserved.add(params[p.key] as string);
+    }
+  }
   return {
     id: createId("k"),
     type,
@@ -36,8 +60,9 @@ export function createInstance(project: Project, type: string, x: number, y: num
     y,
     rotation: 0,
     mirrored: false,
-    label: nextLabel(project, def.labelPrefix),
-    params: defaultParams(def),
+    // Contatos apontam para a bobina: começam em K1 em vez de ganhar número novo.
+    label: def.referenceLabel ? `${def.labelPrefix}1` : nextLabel(project, def.labelPrefix),
+    params,
   };
 }
 

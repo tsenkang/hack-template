@@ -31,7 +31,8 @@ export type ParamDef =
       step?: number;
     }
   | { key: string; type: "boolean"; default: boolean }
-  | { key: string; type: "text"; default: string }
+  /** `autoLabel`: valor inicial numerado sozinho com este prefixo (ex.: "Y" → Y1, Y2…). */
+  | { key: string; type: "text"; default: string; autoLabel?: string }
   | { key: string; type: "select"; default: string; options: string[] };
 
 export interface SymbolProps {
@@ -52,6 +53,8 @@ export interface ComponentDef {
   category: CategoryId;
   /** Prefixo do rótulo automático: "A" → A1, A2… */
   labelPrefix: string;
+  /** O rótulo aponta para outra peça (contato de relé → bobina K1): começa em prefixo+1, sem numerar. */
+  referenceLabel?: boolean;
   /** Tamanho do símbolo em unidades de mundo (múltiplos da grade). */
   width: number;
   height: number;

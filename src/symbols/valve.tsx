@@ -205,7 +205,7 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
     return [sx + p.x, p.side === "top" ? TOP + inset : TOP + VALVE_SQUARE - inset];
   };
 
-  function ValveSymbol({ state }: SymbolProps) {
+  function ValveSymbol({ params, state }: SymbolProps) {
     // O corpo desliza para que o quadrado ativo fique sob os conectores (como no FluidSIM).
     const bodyShift = (spec.restIndex - (state?.spool ?? spec.restIndex)) * VALVE_SQUARE;
     return (
@@ -237,6 +237,17 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
           <g transform={`translate(${act} ${CY})`}>
             <SideActuator spec={spec} side="left" reach={act} />
           </g>
+          {/* rótulo do solenoide (Y1…) acima da bobina */}
+          {spec.left === "solenoid" && (
+            <text className="sym-text" x={act - 11} y={TOP - 1} fontSize={8} textAnchor="middle">
+              {String(params.solenoidLeft ?? "")}
+            </text>
+          )}
+          {spec.right === "solenoid" && (
+            <text className="sym-text" x={act + n * VALVE_SQUARE + 11} y={TOP - 1} fontSize={8} textAnchor="middle">
+              {String(params.solenoidRight ?? "")}
+            </text>
+          )}
           <g transform={`translate(${act + n * VALVE_SQUARE} ${CY}) scale(-1 1)`}>
             <SideActuator spec={spec} side="right" reach={act} />
           </g>
@@ -253,6 +264,9 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
 
   const sides = [spec.left, spec.right];
   const params = [...VALVE_PARAMS];
+  // Solenoides: rótulo que liga a válvula à bobina do circuito elétrico (Y1, Y2…).
+  if (spec.left === "solenoid") params.push({ key: "solenoidLeft", type: "text", default: "Y1", autoLabel: "Y" });
+  if (spec.right === "solenoid") params.push({ key: "solenoidRight", type: "text", default: "Y2", autoLabel: "Y" });
   if (sides.some((s) => POSITION_ACTUATORS.includes(s))) params.push(...POSITION_PARAMS);
   if (sides.includes("roller-oneway")) params.push(DIRECTION_PARAM);
   if (spec.adjustableSpring) params.push(SWITCH_PRESSURE_PARAM);

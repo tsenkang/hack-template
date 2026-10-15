@@ -49,6 +49,7 @@ export type SimSpec =
   | { kind: "check-valve" }
   | { kind: "flow-control-one-way" }
   | { kind: "cylinder"; singleActing: boolean; throughRod?: boolean; cushioned?: boolean }
+  | ElectricSpec
   | {
       kind: "valve";
       squares: readonly { flows: readonly (readonly [string, string])[]; blocked: readonly string[] }[];
@@ -59,6 +60,48 @@ export type SimSpec =
       /** Válvula de 3 posições centrada por molas nos dois lados. */
       springCentered?: boolean;
     };
+
+/** Como um contato elétrico é acionado. */
+export type ContactDrive =
+  /** botão comum (só enquanto apertado) */
+  | "push"
+  /** botão com trava, chave seletora de 2 posições: cada clique alterna */
+  | "toggle"
+  /** botão de emergência: clique trava aberto, outro clique destrava */
+  | "emergency"
+  /** contato de relé, contator, temporizador ou contador com o mesmo rótulo */
+  | "relay"
+  /** fim de curso mecânico (rolete) ou sensor: posição da haste de um cilindro */
+  | "position"
+  /** pressostato: pressão no conector pneumático P */
+  | "pressure";
+
+/** Peças elétricas (IEC 60617). Os conectores elétricos formam redes próprias. */
+export type ElectricSpec =
+  /** Polo da fonte: "positive" fica na tensão ajustada (+24 V, fase), "zero" em 0 V (neutro). */
+  | { kind: "elec-supply"; potential: "positive" | "zero" }
+  /**
+   * Chave com um ou mais contatos. Cada contato liga `a`–`b` quando está fechado:
+   * NA fecha quando acionado; NF abre quando acionado. `tolerance` [mm] para sensores.
+   */
+  | {
+      kind: "elec-switch";
+      drive: ContactDrive;
+      contacts: readonly { a: string; b: string; normally: "open" | "closed" }[];
+      tolerance?: number;
+    }
+  /** Seletora de 3 posições: 1–2 fecha à esquerda, 1–4 à direita, centro desligado. */
+  | { kind: "elec-selector3" }
+  /** Cargas: consomem corrente entre dois terminais. */
+  | {
+      kind: "elec-load";
+      load: "relay-coil" | "solenoid-coil" | "timer-on" | "timer-off" | "counter" | "counter-reset" | "lamp" | "buzzer" | "resistor";
+    }
+  /** Fusível (queima e fica aberto) ou disjuntor (desarma; clique rearma ou desliga). */
+  | { kind: "elec-fuse"; breaker: boolean }
+  | { kind: "elec-diode" };
+
+export const isElectric = (spec: SimSpec): spec is ElectricSpec => spec.kind.startsWith("elec-");
 
 /** Conectores internos que o motor cria para algumas peças (ex.: reservatório do temporizador). */
 export function internalPorts(spec: SimSpec): string[] {
@@ -79,7 +122,10 @@ export interface SimComponent {
   label: string;
   spec: SimSpec;
   params: Record<string, ParamValue>;
+  /** Conectores pneumáticos (redes de ar). */
   ports: SimPort[];
+  /** Conectores elétricos (redes elétricas). */
+  elecPorts: string[];
 }
 
 /** Rede = conjunto de conectores ligados entre si (mesma pressão). */
@@ -91,8 +137,11 @@ export interface SimNet {
 /** Circuito pronto para simular: peças com comportamento + redes já montadas. */
 export interface SimCircuit {
   components: SimComponent[];
+  /** Redes de ar. */
   nets: SimNet[];
-  wires: { id: string; from: string; to: string }[];
+  /** Redes elétricas (fios ligados entre si). */
+  elecNets: SimNet[];
+  wires: { id: string; from: string; to: string; electric: boolean }[];
 }
 
 /** Estado visível de uma peça a cada quadro. */
@@ -118,18 +167,29 @@ export interface ComponentSimState {
   rpm?: number;
   /** Ventosa segurando a peça (vácuo suficiente). */
   holding?: boolean;
+  /** Contato fechado (chaves elétricas; nas de 2 contatos, o primeiro). */
+  closed?: boolean;
+  /** Carga elétrica ligada (bobina, lâmpada, buzina). */
+  energized?: boolean;
+  /** Posição da seletora de 3 posições: −1, 0 ou 1. */
+  position?: number;
+  /** Fusível queimado / disjuntor desarmado. */
+  blown?: boolean;
 }
 
 /** Problema detectado durante a simulação. */
 export interface RuntimeWarning {
   componentId: string;
-  code: "overpressure" | "stuck-signal" | "leak";
+  code: "overpressure" | "stuck-signal" | "leak" | "short-circuit" | "overvoltage" | "fuse-blown";
   port?: string;
   /** Pressão (bar) ou vazão (l/min), conforme o código. */
   value?: number;
 }
 
-/** Estado de uma linha (tubo): pressão em bar e vazão em l/min (positivo = de `from` para `to`). */
+/**
+ * Estado de uma linha. Tubo: pressão `p` [bar] e vazão `q` [l/min].
+ * Fio: tensão `p` [V] e corrente `q` [mA]. Positivo = de `from` para `to`.
+ */
 export interface WireSimState {
   p: number;
   q: number;

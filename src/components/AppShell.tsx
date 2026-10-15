@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Canvas } from "@/editor/Canvas";
+import { SimLegend } from "@/editor/SimLegend";
+import { useSim } from "@/store/sim-store";
 import { t } from "@/i18n";
 import { loadLastProject } from "@/persistence/storage";
 import { useEditor } from "@/store/editor-store";
@@ -21,6 +23,7 @@ import { useShortcuts } from "./useShortcuts";
  */
 export function AppShell() {
   const [ready, setReady] = useState(false);
+  const simulating = useSim((s) => s.status !== "stopped");
 
   // Ao abrir o app, reabre o último projeto salvo neste navegador.
   useEffect(() => {
@@ -51,6 +54,7 @@ export function AppShell() {
         </div>
         <main className="flex min-h-0 min-w-0 flex-col">
           <CircuitTabs />
+          {simulating && <SimLegend />}
           <div className="min-h-0 flex-1">
             <Canvas />
           </div>
