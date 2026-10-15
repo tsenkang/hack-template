@@ -11,6 +11,7 @@ export const silencer: ComponentDef = {
   ports: [{ id: "1", x: 10, y: 0, kind: "pneumatic" }],
   params: [],
   keywords: ["escape", "abafador"],
+  sim: { kind: "silencer" },
   Symbol: () => (
     <g>
       <line className="sym" x1={10} y1={0} x2={10} y2={10} />

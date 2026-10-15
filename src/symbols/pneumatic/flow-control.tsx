@@ -15,6 +15,7 @@ export const flowControlOneWay: ComponentDef = {
   ],
   params: [{ key: "opening", type: "number", unit: "%", default: 50, min: 0, max: 100 }],
   keywords: ["vazão", "velocidade", "estrangulamento", "agulha"],
+  sim: { kind: "flow-control-one-way" },
   Symbol: () => (
     <g>
       <rect className="sym sym-dashed" x={4} y={4} width={52} height={52} />

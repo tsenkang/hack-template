@@ -43,7 +43,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden">
+    <div className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden select-none">
       <TopBar />
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[15rem_minmax(0,1fr)_17rem] xl:grid-cols-[17rem_minmax(0,1fr)_19rem]">
         <div className="hidden min-h-0 md:block">

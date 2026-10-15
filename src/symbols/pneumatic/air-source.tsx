@@ -11,6 +11,7 @@ export const airSource: ComponentDef = {
   ports: [{ id: "1", x: 20, y: 40, kind: "pneumatic" }],
   params: [{ key: "pressure", type: "number", unit: "bar", default: 6, min: 0, max: 16, step: 0.1 }],
   keywords: ["compressor", "alimentação", "ar"],
+  sim: { kind: "air-source" },
   Symbol: () => (
     <g>
       <circle className="sym sym-bg" cx={20} cy={18} r={10} />

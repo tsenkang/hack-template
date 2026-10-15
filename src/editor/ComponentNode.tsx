@@ -1,6 +1,8 @@
 "use client";
 
+import clsx from "clsx";
 import { memo } from "react";
+import type { ComponentSimState } from "@/engine/core/sim-types";
 import type { ComponentInstance } from "@/engine/core/types";
 import { tDynamic } from "@/i18n";
 import { getDef } from "@/symbols/registry";
@@ -9,20 +11,34 @@ import { componentBounds, localToWorld, svgTransform } from "./geometry";
 interface Props {
   comp: ComponentInstance;
   selected: boolean;
+  /** Ids dos conectores sem nenhuma linha, separados por vírgula (string para o memo comparar barato). */
+  openPorts: string;
+  simState?: ComponentSimState;
+  simulating: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
+  onPortPointerDown: (e: React.PointerEvent, id: string, portId: string) => void;
 }
 
 /** Uma peça no desenho: símbolo, conectores, rótulo e contorno de seleção. */
-export const ComponentNode = memo(function ComponentNode({ comp, selected, onPointerDown }: Props) {
+export const ComponentNode = memo(function ComponentNode({
+  comp,
+  selected,
+  openPorts,
+  simState,
+  simulating,
+  onPointerDown,
+  onPortPointerDown,
+}: Props) {
   const def = getDef(comp.type);
   if (!def) return null;
   const { Symbol } = def;
   const b = componentBounds(comp, def);
   const name = tDynamic(`parts.${comp.type}.name`);
+  const open = new Set(openPorts ? openPorts.split(",") : []);
 
   return (
     <g
-      className="component"
+      className={clsx("component", simulating && def.interactive && "interactive")}
       data-component-id={comp.id}
       data-type={comp.type}
       role="button"
@@ -33,17 +49,24 @@ export const ComponentNode = memo(function ComponentNode({ comp, selected, onPoi
       <g transform={svgTransform(comp, def)}>
         {/* área de clique: a caixa inteira, não só os traços */}
         <rect className="hit" x={0} y={0} width={def.width} height={def.height} />
-        <Symbol params={comp.params} />
+        <Symbol params={comp.params} state={simState} />
       </g>
-      {def.ports.map((p) => {
-        const w = localToWorld(comp, def, p);
-        return (
-          <g key={p.id} className="port" data-export-ignore data-port-id={p.id}>
-            <circle className="port-hit" cx={w.x} cy={w.y} r={7} />
-            <circle className={`port-dot port-${p.kind}`} cx={w.x} cy={w.y} r={2.5} />
-          </g>
-        );
-      })}
+      {!simulating &&
+        def.ports.map((p) => {
+          const w = localToWorld(comp, def, p);
+          return (
+            <g
+              key={p.id}
+              className={clsx("port", open.has(p.id) && "port-open")}
+              data-export-ignore
+              data-port-id={p.id}
+              onPointerDown={(e) => onPortPointerDown(e, comp.id, p.id)}
+            >
+              <circle className="port-hit" cx={w.x} cy={w.y} r={7} />
+              <circle className={`port-dot port-${p.kind}`} cx={w.x} cy={w.y} r={2.5} />
+            </g>
+          );
+        })}
       {comp.label && (
         <text className="label" x={b.x + b.w + 3} y={b.y + 9}>
           {comp.label}

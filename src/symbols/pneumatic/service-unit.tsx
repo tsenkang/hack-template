@@ -15,6 +15,7 @@ export const serviceUnit: ComponentDef = {
   ],
   params: [{ key: "setPressure", type: "number", unit: "bar", default: 6, min: 0, max: 12, step: 0.1 }],
   keywords: ["frl", "filtro", "regulador", "lubrificador", "lubrefil"],
+  sim: { kind: "service-unit" },
   Symbol: () => (
     <g>
       <rect className="sym sym-dashed" x={4} y={2} width={92} height={56} />

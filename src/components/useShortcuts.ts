@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { fitAll, zoomBy } from "@/editor/actions";
 import { useEditor } from "@/store/editor-store";
+import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { GRID } from "@/symbols/types";
 import { saveNow } from "./project-actions";
@@ -14,8 +15,26 @@ export function useShortcuts() {
       const target = e.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable], dialog")) return;
       const s = useEditor.getState();
+      const sim = useSim.getState();
       const mod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
+
+      // Simulação: F5 inicia/pausa, Esc para. Enquanto simula, só zoom e controles da simulação.
+      if (e.key === "F5") {
+        e.preventDefault();
+        if (sim.status === "running") sim.pause();
+        else sim.start();
+        return;
+      }
+      if (sim.status !== "stopped") {
+        if (e.key === "Escape") sim.stop();
+        else if (e.key === "+" || e.key === "=") zoomBy(1.25);
+        else if (e.key === "-") zoomBy(1 / 1.25);
+        else if (e.key === "0") fitAll();
+        else return;
+        e.preventDefault();
+        return;
+      }
 
       const handled = (() => {
         if (mod) {

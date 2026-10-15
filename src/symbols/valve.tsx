@@ -4,10 +4,11 @@
  * Uma válvula é descrita só por dados: os quadrados (posições), para onde o
  * fluido vai em cada um, quais vias ficam bloqueadas e o acionamento de cada lado.
  */
+import type { Actuator } from "@/engine/core/sim-types";
 import type { Domain } from "@/engine/core/types";
 import type { CategoryId } from "./categories";
 import { Arrow, Blocked, Spring } from "./draw";
-import type { ComponentDef, ParamDef, PortDef } from "./types";
+import type { ComponentDef, ParamDef, PortDef, SymbolProps } from "./types";
 
 /** Lado do quadrado: 40 × 40 unidades. */
 export const VALVE_SQUARE = 40;
@@ -18,7 +19,7 @@ const TOP = 10;
 const HEIGHT = VALVE_SQUARE + 2 * TOP;
 const CY = TOP + VALVE_SQUARE / 2;
 
-export type Actuator = "spring" | "button" | "pilot" | "solenoid" | "roller" | "lever";
+export type { Actuator };
 
 export interface ValvePort {
   id: string;
@@ -53,6 +54,15 @@ const VALVE_PARAMS: ParamDef[] = [
   { key: "switchTime", type: "number", unit: "ms", default: 20, min: 1, max: 500 },
   { key: "nominalFlow", type: "number", unit: "l/min", default: 500, min: 10, max: 5000, step: 10 },
 ];
+
+/** Válvulas com rolete: qual cilindro e em que ponto do curso a haste encosta no rolete. */
+const ROLLER_PARAMS: ParamDef[] = [
+  { key: "cylinder", type: "text", default: "A1" },
+  { key: "position", type: "number", unit: "%", default: 100, min: 0, max: 100 },
+];
+
+/** Acionamentos que o usuário pode operar com o mouse durante a simulação. */
+const MANUAL: readonly Actuator[] = ["button", "lever", "roller", "solenoid"];
 
 /** Desenho do acionamento, com a borda do corpo em x=0 e crescendo para x negativo. */
 function ActuatorGlyph({ kind, domain }: { kind: Actuator; domain: ValveSpec["domain"] }) {
@@ -130,9 +140,9 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
     return [sx + p.x, p.side === "top" ? TOP + inset : TOP + VALVE_SQUARE - inset];
   };
 
-  function ValveSymbol() {
-    // Fase 1: desenho estático na posição de repouso. Na Fase 2 o corpo desliza conforme o êmbolo.
-    const bodyShift = 0;
+  function ValveSymbol({ state }: SymbolProps) {
+    // O corpo desliza para que o quadrado ativo fique sob os conectores (como no FluidSIM).
+    const bodyShift = (spec.restIndex - (state?.spool ?? spec.restIndex)) * VALVE_SQUARE;
     return (
       <g>
         {spec.ports.map((p) => {
@@ -166,6 +176,13 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
             <ActuatorGlyph kind={spec.right} domain={spec.domain} />
           </g>
         </g>
+        {/* Conector de piloto é fixo; quando o corpo desliza, a linha de comando "estica" até ele. */}
+        {bodyShift !== 0 && spec.left === "pilot" && (
+          <line className="sym sym-dashed" x1={0} y1={CY} x2={bodyShift} y2={CY} />
+        )}
+        {bodyShift !== 0 && spec.right === "pilot" && (
+          <line className="sym sym-dashed" x1={width} y1={CY} x2={width + bodyShift} y2={CY} />
+        )}
       </g>
     );
   }
@@ -179,8 +196,17 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
     width,
     height: HEIGHT,
     ports,
-    params: VALVE_PARAMS,
+    params: spec.left === "roller" || spec.right === "roller" ? [...VALVE_PARAMS, ...ROLLER_PARAMS] : VALVE_PARAMS,
     keywords: spec.keywords,
+    interactive: MANUAL.includes(spec.left) || MANUAL.includes(spec.right),
+    sim: {
+      kind: "valve",
+      squares: spec.squares,
+      restIndex: spec.restIndex,
+      left: spec.left,
+      right: spec.right,
+      pilotIds: spec.pilotIds,
+    },
     Symbol: ValveSymbol,
   };
 }

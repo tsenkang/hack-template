@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ComponentInstance, ParamValue } from "@/engine/core/types";
 import { t, tDynamic } from "@/i18n";
 import { selectActiveCircuit, useEditor } from "@/store/editor-store";
+import { isSimulating, useSim } from "@/store/sim-store";
 import { getDef } from "@/symbols/registry";
 import type { ParamDef } from "@/symbols/types";
 import { IconButton } from "./IconButton";
@@ -83,7 +84,16 @@ function ComponentProperties({ comp }: { comp: ComponentInstance }) {
         {def.params.length === 0 && <p className="text-muted">{t("properties.noParams")}</p>}
         <div className="space-y-3">
           {def.params.map((p) => (
-            <ParamField key={p.key} param={p} value={comp.params[p.key] ?? p.default} onChange={(v) => s().setParam(comp.id, p.key, v)} />
+            <ParamField
+              key={p.key}
+              param={p}
+              value={comp.params[p.key] ?? p.default}
+              onChange={(v) => {
+                s().setParam(comp.id, p.key, v);
+                // Durante a simulação o valor novo vale na hora (ex.: girar o regulador).
+                if (isSimulating()) useSim.getState().setParam(comp.id, p.key, v);
+              }}
+            />
           ))}
         </div>
       </section>
@@ -127,6 +137,13 @@ function ParamField({ param, value, onChange }: { param: ParamDef; value: ParamV
             </option>
           ))}
         </select>
+      </Field>
+    );
+  }
+  if (param.type === "text") {
+    return (
+      <Field id={id} label={label} help={help}>
+        <CommitInput id={id} className={fieldClass} value={String(value)} onCommit={(v) => onChange(v.trim())} />
       </Field>
     );
   }

@@ -42,6 +42,7 @@ O GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda l
    - o desenho SVG (`Symbol`).
 
    Para válvulas direcionais e cilindros, use os geradores `makeValveDef` e `makeCylinderDef`: a peça vira só dados.
+   Para a peça simular, informe `sim` com um dos comportamentos que o motor já conhece (`SimSpec` em `src/engine/core/sim-types.ts`).
 2. Registre a peça em `src/symbols/registry.ts`.
 3. Adicione nome, descrição e textos dos parâmetros em `src/i18n/pt-BR.ts` (`parts.<tipo>` e `params.<chave>`).
 4. Rode `npm test`. O teste da biblioteca confere se a peça está na grade e se tem todos os textos.
@@ -53,7 +54,8 @@ src/app          página Next.js (só cliente)
 src/components   interface: barra, biblioteca, propriedades, abas, painel de baixo
 src/editor       área de desenho: zoom, grade, ímã, seleção, giro, alinhamento
 src/symbols      uma definição por peça (desenho + conectores + parâmetros)
-src/engine       modelo do circuito e, a partir da Fase 2, o motor de simulação (sem React)
+src/engine       motor de simulação em TypeScript puro (sem React), testável sem navegador
+src/worker       Web Worker que roda o motor sem travar a tela
 src/store        estado (Zustand): projeto, histórico de desfazer, seleção, preferências
 src/persistence  IndexedDB, formato .json versionado, exportar imagem
 src/i18n         textos (pt-BR; pronto para en/es)

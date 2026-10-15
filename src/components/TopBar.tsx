@@ -18,11 +18,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
+import { SPEEDS, useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { IconButton } from "./IconButton";
 import { exportImage, exportJson, newProject, saveNow } from "./project-actions";
 
-const SPEEDS = [0.1, 0.25, 0.5, 1, 2, 5, 10];
 const divider = <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />;
 
 /** Barra de cima: arquivo, desfazer/refazer, simulação, exportar e tema. */
@@ -31,7 +31,11 @@ export function TopBar() {
   const canRedo = useEditor((s) => s.future.length > 0);
   const projectName = useEditor((s) => s.project.name);
   const theme = useUi((s) => s.theme);
+  const status = useSim((s) => s.status);
+  const speed = useSim((s) => s.speed);
+  const simulating = status !== "stopped";
   const s = useEditor.getState;
+  const sim = useSim.getState;
 
   return (
     <header className="flex h-12 items-center gap-1 border-b border-line bg-panel px-2">
@@ -52,10 +56,14 @@ export function TopBar() {
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       />
       {divider}
-      <IconButton label={t("toolbar.new")} onClick={newProject}>
+      <IconButton label={t("toolbar.new")} disabled={simulating} onClick={newProject}>
         <FilePlus2 size={18} />
       </IconButton>
-      <IconButton label={`${t("toolbar.open")} (Ctrl+O)`} onClick={() => useUi.getState().setOpenDialog(true)}>
+      <IconButton
+        label={`${t("toolbar.open")} (Ctrl+O)`}
+        disabled={simulating}
+        onClick={() => useUi.getState().setOpenDialog(true)}
+      >
         <FolderOpen size={18} />
       </IconButton>
       <IconButton label={`${t("toolbar.save")} (Ctrl+S)`} onClick={saveNow}>
@@ -63,32 +71,35 @@ export function TopBar() {
       </IconButton>
       <ExportMenu />
       {divider}
-      <IconButton label={`${t("toolbar.undo")} (Ctrl+Z)`} disabled={!canUndo} onClick={() => s().undo()}>
+      <IconButton label={`${t("toolbar.undo")} (Ctrl+Z)`} disabled={!canUndo || simulating} onClick={() => s().undo()}>
         <Undo2 size={18} />
       </IconButton>
-      <IconButton label={`${t("toolbar.redo")} (Ctrl+Y)`} disabled={!canRedo} onClick={() => s().redo()}>
+      <IconButton label={`${t("toolbar.redo")} (Ctrl+Y)`} disabled={!canRedo || simulating} onClick={() => s().redo()}>
         <Redo2 size={18} />
       </IconButton>
       {divider}
-      {/* Controles da simulação: ficam visíveis desde já e são ligados na Fase 2. */}
-      <div className="flex items-center gap-0.5" title={t("toolbar.simComingSoon")}>
-        <IconButton label={t("toolbar.play")} disabled>
-          <Play size={18} />
-        </IconButton>
-        <IconButton label={t("toolbar.pause")} disabled>
-          <Pause size={18} />
-        </IconButton>
-        <IconButton label={t("toolbar.stop")} disabled>
+      <div className="flex items-center gap-0.5" role="group" aria-label={t("toolbar.play")}>
+        {status === "running" ? (
+          <IconButton label={`${t("toolbar.pause")} (F5)`} active onClick={() => sim().pause()}>
+            <Pause size={18} />
+          </IconButton>
+        ) : (
+          <IconButton label={`${t("toolbar.play")} (F5)`} onClick={() => sim().start()} data-testid="sim-play">
+            <Play size={18} />
+          </IconButton>
+        )}
+        <IconButton label={`${t("toolbar.stop")} (Esc)`} disabled={!simulating} onClick={() => sim().stop()} data-testid="sim-stop">
           <Square size={16} />
         </IconButton>
-        <IconButton label={t("toolbar.step")} disabled>
+        <IconButton label={`${t("toolbar.step")} — ${t("toolbar.stepHint")}`} onClick={() => sim().step()}>
           <StepForward size={18} />
         </IconButton>
         <select
           aria-label={t("toolbar.speed")}
-          disabled
-          defaultValue={1}
-          className="ml-1 hidden h-8 rounded-md border border-line bg-panel px-1 text-xs disabled:opacity-40 lg:block"
+          title={t("toolbar.speed")}
+          value={speed}
+          onChange={(e) => sim().setSpeed(Number(e.target.value))}
+          className="ml-1 hidden h-8 rounded-md border border-line bg-panel px-1 text-xs lg:block"
         >
           {SPEEDS.map((v) => (
             <option key={v} value={v}>

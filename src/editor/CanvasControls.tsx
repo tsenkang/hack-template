@@ -34,14 +34,14 @@ const ALIGN: { mode: AlignMode; icon: typeof AlignStartVertical; label: Paramete
 const panel = "pointer-events-auto flex items-center gap-0.5 rounded-lg border border-line bg-panel p-1 shadow-sm";
 
 /** Botões flutuantes sobre o desenho: ações da seleção (em cima) e zoom/ímã (embaixo). */
-export function CanvasControls({ snapEnabled }: { snapEnabled: boolean }) {
+export function CanvasControls({ snapEnabled, zoomOnly }: { snapEnabled: boolean; zoomOnly: boolean }) {
   const count = useEditor((s) => s.selection.length);
   const zoom = useEditor((s) => selectViewport(s).zoom);
   const s = useEditor.getState;
 
   return (
     <>
-      {count > 0 && (
+      {count > 0 && !zoomOnly && (
         <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2">
           <div className={panel} role="toolbar" aria-label={t("properties.title")}>
             <IconButton label={t("canvas.rotate")} onClick={() => s().rotateSelection()}>
@@ -72,10 +72,14 @@ export function CanvasControls({ snapEnabled }: { snapEnabled: boolean }) {
 
       <div className="pointer-events-none absolute right-2 bottom-2 flex">
         <div className={panel}>
-          <IconButton label={t("canvas.snap")} active={snapEnabled} onClick={() => s().toggleSnap()}>
-            <Magnet size={16} />
-          </IconButton>
-          <span className="mx-1 h-5 w-px bg-line" />
+          {!zoomOnly && (
+            <>
+              <IconButton label={t("canvas.snap")} active={snapEnabled} onClick={() => s().toggleSnap()}>
+                <Magnet size={16} />
+              </IconButton>
+              <span className="mx-1 h-5 w-px bg-line" />
+            </>
+          )}
           <IconButton label={t("canvas.zoomOut")} onClick={() => zoomBy(1 / 1.25)}>
             <ZoomOut size={16} />
           </IconButton>

@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { ComponentSimState, SimSpec } from "@/engine/core/sim-types";
 import type { Domain, ParamValue } from "@/engine/core/types";
 import type { CategoryId } from "./categories";
 
@@ -28,10 +29,13 @@ export type ParamDef =
       step?: number;
     }
   | { key: string; type: "boolean"; default: boolean }
+  | { key: string; type: "text"; default: string }
   | { key: string; type: "select"; default: string; options: string[] };
 
 export interface SymbolProps {
   params: Record<string, ParamValue>;
+  /** Estado da simulação (posição do êmbolo, da haste, pressão…). Ausente no modo de edição. */
+  state?: ComponentSimState;
 }
 
 /**
@@ -53,6 +57,10 @@ export interface ComponentDef {
   params: readonly ParamDef[];
   /** Palavras extras para a busca da biblioteca. */
   keywords?: string[];
+  /** Comportamento no motor de simulação (ausente = peça ainda não simulada). */
+  sim?: SimSpec;
+  /** Pode ser operada com clique durante a simulação (botões, alavancas, acionamento manual). */
+  interactive?: boolean;
   /** Desenho SVG do símbolo, em coordenadas locais (0,0)–(width,height). */
   Symbol: ComponentType<SymbolProps>;
 }

@@ -6,7 +6,7 @@
  */
 import { create } from "zustand";
 import { createId } from "@/engine/core/ids";
-import type { ComponentInstance, ParamValue, Point, Project } from "@/engine/core/types";
+import type { ComponentInstance, Connection, ParamValue, Point, PortRef, Project } from "@/engine/core/types";
 import { alignRects, componentBounds, rotateAroundCenter, snap, type AlignMode, type Viewport } from "@/editor/geometry";
 import { getDef } from "@/symbols/registry";
 import { createCircuit, createInstance, createProject, nextLabel, updateCircuit, updateComponents } from "./project-model";
@@ -16,6 +16,14 @@ const HISTORY_LIMIT = 1000;
 const PASTE_OFFSET = 20;
 export const DEFAULT_VIEWPORT: Viewport = { x: 80, y: 60, zoom: 1.5 };
 
+/** Área de transferência: peças e as linhas entre elas. */
+export interface Clipboard {
+  components: ComponentInstance[];
+  connections: Connection[];
+}
+
+const samePort = (a: PortRef, b: PortRef) => a.componentId === b.componentId && a.portId === b.portId;
+
 export interface EditorState {
   project: Project;
   activeCircuitId: string;
@@ -24,7 +32,7 @@ export interface EditorState {
   /** Projeto no início de um gesto (ex.: arrastar). O gesto inteiro vira 1 passo de desfazer. */
   gestureBase: Project | null;
   selection: string[];
-  clipboard: ComponentInstance[];
+  clipboard: Clipboard;
   pasteCount: number;
   viewports: Record<string, Viewport>;
   canvasSize: { w: number; h: number };
@@ -41,6 +49,7 @@ export interface EditorState {
 
   addComponent(type: string, at: Point): string | null;
   setPositions(positions: Record<string, Point>): void;
+  addConnection(from: PortRef, to: PortRef): string | null;
   nudgeSelection(dx: number, dy: number): void;
   rotateSelection(): void;
   mirrorSelection(): void;
@@ -77,7 +86,7 @@ function initialState() {
     future: [] as Project[],
     gestureBase: null as Project | null,
     selection: [] as string[],
-    clipboard: [] as ComponentInstance[],
+    clipboard: { components: [], connections: [] } as Clipboard,
     pasteCount: 0,
     viewports: {} as Record<string, Viewport>,
   };
@@ -102,26 +111,49 @@ export const useEditor = create<EditorState>()((set, get) => {
 
   const selectedSet = () => new Set(get().selection);
 
-  /** Depois de desfazer/refazer: garante aba ativa válida e remove da seleção peças que sumiram. */
+  /** Depois de desfazer/refazer: garante aba ativa válida e remove da seleção o que sumiu. */
   const reconcile = (project: Project) => {
     const { activeCircuitId, selection } = get();
     const circuit = project.circuits.find((c) => c.id === activeCircuitId) ?? project.circuits[0];
-    const ids = new Set(circuit.components.map((c) => c.id));
+    const ids = new Set([...circuit.components.map((c) => c.id), ...circuit.connections.map((w) => w.id)]);
     return { activeCircuitId: circuit.id, selection: selection.filter((id) => ids.has(id)) };
   };
 
-  /** Insere cópias das peças (com ids e rótulos novos), deslocadas de `offset`. */
-  const insertCopies = (source: ComponentInstance[], offset: number) => {
+  /** Peças selecionadas + linhas que ligam duas delas. */
+  const selectionClipboard = (): Clipboard => {
+    const ids = selectedSet();
+    const circuit = activeCircuit();
+    const components = circuit.components.filter((c) => ids.has(c.id));
+    const inside = new Set(components.map((c) => c.id));
+    const connections = circuit.connections.filter((w) => inside.has(w.from.componentId) && inside.has(w.to.componentId));
+    return { components, connections };
+  };
+
+  /** Insere cópias das peças e das linhas entre elas (ids e rótulos novos), deslocadas de `offset`. */
+  const insertCopies = (source: Clipboard, offset: number) => {
     const { project } = get();
     const reserved = new Set<string>();
-    const copies = source.map((comp) => {
+    const newId = new Map<string, string>();
+    const copies = source.components.map((comp) => {
       const def = getDef(comp.type);
       const label = def ? nextLabel(project, def.labelPrefix, reserved) : comp.label;
       reserved.add(label);
-      return { ...comp, id: createId("k"), x: comp.x + offset, y: comp.y + offset, label, params: { ...comp.params } };
+      const id = createId("k");
+      newId.set(comp.id, id);
+      return { ...comp, id, x: comp.x + offset, y: comp.y + offset, label, params: { ...comp.params } };
     });
+    const wires = source.connections.map((w) => ({
+      id: createId("w"),
+      from: { ...w.from, componentId: newId.get(w.from.componentId)! },
+      to: { ...w.to, componentId: newId.get(w.to.componentId)! },
+      waypoints: [],
+    }));
     commit(
-      updateCircuit(project, activeCircuit().id, (c) => ({ ...c, components: [...c.components, ...copies] })),
+      updateCircuit(project, activeCircuit().id, (c) => ({
+        ...c,
+        components: [...c.components, ...copies],
+        connections: [...c.connections, ...wires],
+      })),
       { selection: copies.map((c) => c.id) },
     );
   };
@@ -179,6 +211,20 @@ export const useEditor = create<EditorState>()((set, get) => {
       const ids = new Set(Object.keys(positions));
       commit(updateComponents(get().project, activeCircuit().id, ids, (c) => ({ ...c, ...positions[c.id] })));
     },
+    addConnection(from, to) {
+      if (samePort(from, to)) return null;
+      const circuit = activeCircuit();
+      const exists = circuit.connections.some(
+        (w) => (samePort(w.from, from) && samePort(w.to, to)) || (samePort(w.from, to) && samePort(w.to, from)),
+      );
+      if (exists) return null;
+      const wire: Connection = { id: createId("w"), from, to, waypoints: [] };
+      commit(
+        updateCircuit(get().project, circuit.id, (c) => ({ ...c, connections: [...c.connections, wire] })),
+        { selection: [wire.id] },
+      );
+      return wire.id;
+    },
     nudgeSelection(dx, dy) {
       const ids = selectedSet();
       if (ids.size === 0) return;
@@ -206,7 +252,9 @@ export const useEditor = create<EditorState>()((set, get) => {
         updateCircuit(get().project, activeCircuit().id, (c) => ({
           ...c,
           components: c.components.filter((comp) => !ids.has(comp.id)),
-          connections: c.connections.filter((w) => !ids.has(w.from.componentId) && !ids.has(w.to.componentId)),
+          connections: c.connections.filter(
+            (w) => !ids.has(w.id) && !ids.has(w.from.componentId) && !ids.has(w.to.componentId),
+          ),
         })),
         { selection: [] },
       );
@@ -232,9 +280,8 @@ export const useEditor = create<EditorState>()((set, get) => {
     },
 
     copySelection() {
-      const ids = selectedSet();
-      const clipboard = activeCircuit().components.filter((c) => ids.has(c.id));
-      if (clipboard.length) set({ clipboard, pasteCount: 0 });
+      const clipboard = selectionClipboard();
+      if (clipboard.components.length) set({ clipboard, pasteCount: 0 });
     },
     cutSelection() {
       get().copySelection();
@@ -242,15 +289,14 @@ export const useEditor = create<EditorState>()((set, get) => {
     },
     paste() {
       const { clipboard, pasteCount } = get();
-      if (!clipboard.length) return;
+      if (!clipboard.components.length) return;
       const count = pasteCount + 1;
       set({ pasteCount: count });
       insertCopies(clipboard, PASTE_OFFSET * count);
     },
     duplicateSelection() {
-      const ids = selectedSet();
-      const source = activeCircuit().components.filter((c) => ids.has(c.id));
-      if (source.length) insertCopies(source, PASTE_OFFSET);
+      const source = selectionClipboard();
+      if (source.components.length) insertCopies(source, PASTE_OFFSET);
     },
 
     select(ids) {

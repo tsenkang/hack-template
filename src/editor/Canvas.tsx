@@ -4,12 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Point } from "@/engine/core/types";
 import { t } from "@/i18n";
 import { selectActiveCircuit, selectViewport, useEditor } from "@/store/editor-store";
+import { useSim } from "@/store/sim-store";
+import type { Actuator } from "@/engine/core/sim-types";
 import { getDef } from "@/symbols/registry";
 import { GRID } from "@/symbols/types";
 import { CanvasControls } from "./CanvasControls";
 import { ComponentNode } from "./ComponentNode";
 import {
   componentBounds,
+  localToWorld,
   rectFromPoints,
   rectsIntersect,
   screenToWorld,
@@ -18,30 +21,75 @@ import {
   type Rect,
   type Viewport,
 } from "./geometry";
+import { routeOrthogonal, simplify } from "./routing";
+import { SimLegend } from "./SimLegend";
+import { WireView } from "./WireView";
+import { allPorts, canConnect, pointsToPath, portInfo, routeAll, type PortInfo } from "./wires";
 
 /** Tipo MIME usado ao arrastar uma peça da biblioteca para o desenho. */
 export const DND_MIME = "application/x-fluxolab-part";
 
+/** Distância (em pixels da tela) para "grudar" a linha num conector. */
+const PORT_SNAP_PX = 16;
+const MANUAL: readonly Actuator[] = ["button", "lever", "roller", "solenoid"];
+
 type Drag =
   | { kind: "pan"; start: Point; origin: Viewport }
   | { kind: "move"; startWorld: Point; origins: Record<string, Point> }
-  | { kind: "marquee"; startWorld: Point; base: string[] };
+  | { kind: "marquee"; startWorld: Point; base: string[] }
+  | { kind: "wire"; from: PortInfo };
 
-/** Área de desenho: grade, zoom, mover a tela, seleção, arrastar peças e soltar da biblioteca. */
+interface WirePreview {
+  points: Point[];
+  target: PortInfo | null;
+}
+
+const portKey = (p: { componentId: string; portId: string }) => `${p.componentId}:${p.portId}`;
+
+/** Área de desenho: grade, zoom, mover a tela, seleção, ligar linhas e operar peças na simulação. */
 export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const circuit = useEditor(selectActiveCircuit);
   const viewport = useEditor(selectViewport);
   const selection = useEditor((s) => s.selection);
   const snapEnabled = useEditor((s) => s.snapEnabled);
+  const simulating = useSim((s) => s.status !== "stopped");
+  const snapshot = useSim((s) => s.snapshot);
   const [marquee, setMarquee] = useState<Rect | null>(null);
+  const [wirePreview, setWirePreview] = useState<WirePreview | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [panning, setPanning] = useState(false);
   const drag = useRef<Drag | null>(null);
+  const held = useRef<{ id: string; side: "left" | "right" } | null>(null);
   const touches = useRef(new Map<number, Point>());
   const pinch = useRef<{ dist: number; mid: Point } | null>(null);
 
   const selected = useMemo(() => new Set(selection), [selection]);
+  const routes = useMemo(() => routeAll(circuit), [circuit]);
+
+  /** Conectores com linha, conectores soltos por peça, pontos de junção e linhas de piloto. */
+  const topology = useMemo(() => {
+    const ends = new Map<string, number>();
+    for (const w of circuit.connections) {
+      for (const k of [portKey(w.from), portKey(w.to)]) ends.set(k, (ends.get(k) ?? 0) + 1);
+    }
+    const openPorts = new Map<string, string>();
+    const junctions: Point[] = [];
+    const pilotWires = new Set<string>();
+    for (const comp of circuit.components) {
+      const def = getDef(comp.type);
+      if (!def) continue;
+      openPorts.set(comp.id, def.ports.filter((p) => !ends.has(`${comp.id}:${p.id}`)).map((p) => p.id).join(","));
+      for (const p of def.ports) if ((ends.get(`${comp.id}:${p.id}`) ?? 0) >= 2) junctions.push(localToWorld(comp, def, p));
+    }
+    const kindOf = new Map<string, string>(
+      circuit.components.flatMap((c) => (getDef(c.type)?.ports ?? []).map((p) => [`${c.id}:${p.id}`, p.kind] as const)),
+    );
+    for (const w of circuit.connections) {
+      if (kindOf.get(portKey(w.from)) === "pilot" || kindOf.get(portKey(w.to)) === "pilot") pilotWires.add(w.id);
+    }
+    return { openPorts, junctions, pilotWires };
+  }, [circuit]);
 
   /** Ponto do evento em coordenadas da tela do SVG. */
   const local = useCallback((e: { clientX: number; clientY: number }): Point => {
@@ -101,10 +149,42 @@ export function Canvas() {
     setPanning(true);
   };
 
+  /** Durante a simulação: aperta o acionamento manual mais próximo do clique. */
+  const actuate = useCallback(
+    (e: React.PointerEvent, id: string): boolean => {
+      const s = useEditor.getState();
+      const comp = selectActiveCircuit(s).components.find((c) => c.id === id);
+      const def = comp && getDef(comp.type);
+      if (!comp || !def?.interactive) return false;
+      let side: "left" | "right" = "left";
+      if (def.sim?.kind === "valve") {
+        const leftManual = MANUAL.includes(def.sim.left);
+        const rightManual = MANUAL.includes(def.sim.right);
+        if (leftManual && rightManual) {
+          const click = screenToWorld(selectViewport(s), local(e));
+          const l = localToWorld(comp, def, { x: 15, y: def.height / 2 });
+          const r = localToWorld(comp, def, { x: def.width - 15, y: def.height / 2 });
+          side = Math.hypot(click.x - l.x, click.y - l.y) <= Math.hypot(click.x - r.x, click.y - r.y) ? "left" : "right";
+        } else side = leftManual ? "left" : "right";
+      }
+      useSim.getState().actuate(id, side, true);
+      held.current = { id, side };
+      return true;
+    },
+    [local],
+  );
+
   const onComponentPointerDown = useCallback(
     (e: React.PointerEvent, id: string) => {
       // Espaço segurado ou botão do meio: deixa o evento subir para o fundo mover a tela.
       if (spaceHeld || e.button !== 0) return;
+      if (useSim.getState().status !== "stopped") {
+        // Na simulação: aciona botões/alavancas; nas outras peças, só seleciona (para ajustar parâmetros).
+        e.stopPropagation();
+        svgRef.current?.setPointerCapture(e.pointerId);
+        if (!actuate(e, id)) useEditor.getState().select([id]);
+        return;
+      }
       e.stopPropagation();
       svgRef.current?.setPointerCapture(e.pointerId);
       const s = useEditor.getState();
@@ -125,7 +205,32 @@ export function Canvas() {
         origins: Object.fromEntries(comps.map((c) => [c.id, { x: c.x, y: c.y }])),
       };
     },
-    [local, spaceHeld],
+    [local, spaceHeld, actuate],
+  );
+
+  const onPortPointerDown = useCallback(
+    (e: React.PointerEvent, componentId: string, portId: string) => {
+      if (spaceHeld || e.button !== 0) return;
+      const comp = selectActiveCircuit(useEditor.getState()).components.find((c) => c.id === componentId);
+      const from = comp && portInfo(comp, portId);
+      if (!from) return;
+      e.stopPropagation();
+      svgRef.current?.setPointerCapture(e.pointerId);
+      drag.current = { kind: "wire", from };
+      setWirePreview({ points: [from.pos, from.pos], target: null });
+    },
+    [spaceHeld],
+  );
+
+  const onWirePointerDown = useCallback(
+    (e: React.PointerEvent, id: string) => {
+      if (spaceHeld || e.button !== 0 || useSim.getState().status !== "stopped") return;
+      e.stopPropagation();
+      const s = useEditor.getState();
+      if (e.shiftKey || e.ctrlKey || e.metaKey) s.toggleSelected(id);
+      else s.select([id]);
+    },
+    [spaceHeld],
   );
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -139,8 +244,9 @@ export function Canvas() {
         return;
       }
     }
-    // Botão do meio, espaço segurado ou um dedo no vazio = mover a tela.
-    if (e.button === 1 || spaceHeld || e.pointerType === "touch") {
+    // Botão do meio, espaço segurado, um dedo no vazio ou simulação rodando = mover a tela.
+    if (simulating) useEditor.getState().select([]);
+    if (e.button === 1 || spaceHeld || e.pointerType === "touch" || simulating) {
       startPan(e);
       return;
     }
@@ -153,6 +259,24 @@ export function Canvas() {
       startWorld: screenToWorld(selectViewport(s), local(e)),
       base: additive ? s.selection : [],
     };
+  };
+
+  /** Conector compatível mais próximo do ponto (para "grudar" a linha). */
+  const nearestPort = (world: Point, from: PortInfo): PortInfo | null => {
+    const s = useEditor.getState();
+    const radius = PORT_SNAP_PX / selectViewport(s).zoom;
+    let best: PortInfo | null = null;
+    let bestDist = radius;
+    for (const p of allPorts(selectActiveCircuit(s))) {
+      if (p.ref.componentId === from.ref.componentId && p.ref.portId === from.ref.portId) continue;
+      if (!canConnect(from.kind, p.kind)) continue;
+      const d = Math.hypot(p.pos.x - world.x, p.pos.y - world.y);
+      if (d < bestDist) {
+        best = p;
+        bestDist = d;
+      }
+    }
+    return best;
   };
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -183,6 +307,21 @@ export function Canvas() {
       s.setPositions(
         Object.fromEntries(Object.entries(d.origins).map(([id, o]) => [id, { x: o.x + dx, y: o.y + dy }])),
       );
+    } else if (d.kind === "wire") {
+      const w = screenToWorld(selectViewport(s), p);
+      const target = nearestPort(w, d.from);
+      const obstacles = selectActiveCircuit(s).components.flatMap((c) => {
+        const def = getDef(c.type);
+        return def ? [componentBounds(c, def)] : [];
+      });
+      const stub = {
+        x: d.from.pos.x + [GRID, 0, -GRID, 0][d.from.dir],
+        y: d.from.pos.y + [0, GRID, 0, -GRID][d.from.dir],
+      };
+      const points = target
+        ? routeOrthogonal({ from: d.from.pos, fromDir: d.from.dir, to: target.pos, toDir: target.dir, obstacles })
+        : simplify([d.from.pos, stub, { x: w.x, y: stub.y }, w]);
+      setWirePreview({ points, target });
     } else {
       const rect = rectFromPoints(d.startWorld, screenToWorld(selectViewport(s), p));
       setMarquee(rect);
@@ -199,15 +338,22 @@ export function Canvas() {
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     touches.current.delete(e.pointerId);
     if (touches.current.size < 2) pinch.current = null;
-    if (drag.current?.kind === "move") useEditor.getState().endGesture();
+    const d = drag.current;
+    if (d?.kind === "move") useEditor.getState().endGesture();
+    if (d?.kind === "wire" && wirePreview?.target) useEditor.getState().addConnection(d.from.ref, wirePreview.target.ref);
+    if (held.current) {
+      useSim.getState().actuate(held.current.id, held.current.side, false);
+      held.current = null;
+    }
     drag.current = null;
     setMarquee(null);
+    setWirePreview(null);
     setPanning(false);
   };
 
   const onDrop = (e: React.DragEvent) => {
     const type = e.dataTransfer.getData(DND_MIME);
-    if (!type) return;
+    if (!type || simulating) return;
     e.preventDefault();
     const s = useEditor.getState();
     s.addComponent(type, screenToWorld(selectViewport(s), local(e)));
@@ -222,7 +368,7 @@ export function Canvas() {
     <div className="relative h-full w-full overflow-hidden bg-canvas">
       <svg
         ref={svgRef}
-        className="block h-full w-full touch-none select-none outline-none"
+        className={`block h-full w-full touch-none select-none outline-none ${wirePreview ? "wiring" : ""} ${simulating ? "simulating" : ""}`}
         style={{ cursor }}
         tabIndex={0}
         role="application"
@@ -233,7 +379,7 @@ export function Canvas() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onDragOver={(e) => {
-          if (e.dataTransfer.types.includes(DND_MIME)) {
+          if (e.dataTransfer.types.includes(DND_MIME) && !simulating) {
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
           }
@@ -253,14 +399,45 @@ export function Canvas() {
         <rect width="100%" height="100%" fill="url(#grid-major)" />
 
         <g id="circuit-content" transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}>
+          <g className="wires">
+            {circuit.connections.map((w) => {
+              const points = routes.get(w.id);
+              return points ? (
+                <WireView
+                  key={w.id}
+                  id={w.id}
+                  points={points}
+                  selected={selected.has(w.id)}
+                  pilot={topology.pilotWires.has(w.id)}
+                  state={snapshot?.wires[w.id]}
+                  onPointerDown={onWirePointerDown}
+                />
+              ) : null;
+            })}
+          </g>
           {circuit.components.map((comp) => (
             <ComponentNode
               key={comp.id}
               comp={comp}
               selected={selected.has(comp.id)}
+              openPorts={topology.openPorts.get(comp.id) ?? ""}
+              simState={snapshot?.components[comp.id]}
+              simulating={simulating}
               onPointerDown={onComponentPointerDown}
+              onPortPointerDown={onPortPointerDown}
             />
           ))}
+          {topology.junctions.map((p) => (
+            <circle key={`${p.x},${p.y}`} className="junction-dot" cx={p.x} cy={p.y} r={2.6} />
+          ))}
+          {wirePreview && (
+            <g data-export-ignore>
+              <path className="wire-preview" d={pointsToPath(wirePreview.points)} />
+              {wirePreview.target && (
+                <circle className="port-target" cx={wirePreview.target.pos.x} cy={wirePreview.target.pos.y} r={6} />
+              )}
+            </g>
+          )}
           {marquee && (
             <rect
               className="marquee"
@@ -281,7 +458,8 @@ export function Canvas() {
         </div>
       )}
 
-      <CanvasControls snapEnabled={snapEnabled} />
+      {simulating && <SimLegend />}
+      <CanvasControls snapEnabled={snapEnabled} zoomOnly={simulating} />
     </div>
   );
 }

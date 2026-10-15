@@ -25,6 +25,9 @@
   --port-hydraulic: #c2410c;
   --port-pilot: #1a66d6;
   --port-electric: #b91c1c;
+  --line-pressure: #1d4ed8;
+  --line-empty: #93b4e6;
+  --line-flow: #ffffff;
   color-scheme: light;
 }
 
@@ -47,6 +50,9 @@
   --port-hydraulic: #fb923c;
   --port-pilot: #5b9dff;
   --port-electric: #f87171;
+  --line-pressure: #60a5fa;
+  --line-empty: #36507a;
+  --line-flow: #0e1117;
   color-scheme: dark;
 }
 
@@ -134,6 +140,105 @@ body {
 .port-hydraulic { fill: var(--port-hydraulic); }
 .port-pilot { fill: var(--port-pilot); }
 .port-electric { fill: var(--port-electric); }
+.component.interactive {
+  cursor: pointer;
+}
+.simulating .component:not(.interactive) {
+  cursor: default;
+}
+/* Conector solto: sempre visível (anel vazado) para o aluno ver o que falta ligar. */
+.component .port.port-open {
+  opacity: 1;
+}
+.port-open .port-dot {
+  fill: var(--panel);
+  stroke: var(--sym-stroke);
+  stroke-width: 1;
+}
+.component:hover .port-open .port-dot,
+.wiring .port-open .port-dot {
+  fill: var(--accent);
+  stroke: var(--panel);
+}
+.port {
+  cursor: crosshair;
+}
+.wiring .port {
+  opacity: 1;
+}
+.port-target {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* ---------- Linhas (tubos) ---------- */
+.wire,
+.wire-preview {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.wire-preview {
+  stroke: var(--accent);
+  stroke-dasharray: 5 4;
+}
+.wire-pilot {
+  stroke-dasharray: 5 3;
+}
+.wire-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  cursor: pointer;
+}
+.simulating .wire-hit {
+  cursor: inherit;
+}
+.wire-selected {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Simulação: com pressão = linha grossa e azul forte; sem pressão = fina e clara. */
+.wire-pressurized {
+  stroke: var(--line-pressure);
+  stroke-width: 2.6;
+}
+.legend-pressure {
+  stroke: var(--line-pressure);
+}
+.wire-empty {
+  stroke: var(--line-empty);
+  stroke-width: 1.5;
+}
+.wire-flow {
+  fill: none;
+  stroke: var(--line-flow);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 2 10;
+  pointer-events: none;
+  animation: flow linear infinite;
+}
+.wire-flow.reverse {
+  animation-direction: reverse;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+.junction-dot {
+  fill: var(--sym-stroke);
+  pointer-events: none;
+}
+
 .selection-outline {
   fill: none;
   stroke: var(--accent);

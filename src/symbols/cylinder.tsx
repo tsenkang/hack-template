@@ -1,11 +1,11 @@
 /**
  * Gerador de cilindros lineares (simples e dupla ação), usado na pneumática e na hidráulica.
- * O desenho tem o corpo, o êmbolo e a haste; na Fase 2 a haste passa a se mover com a simulação.
+ * O desenho tem o corpo, o êmbolo e a haste; durante a simulação a haste acompanha `state.extension`.
  */
 import type { Domain } from "@/engine/core/types";
 import type { CategoryId } from "./categories";
 import { Spring } from "./draw";
-import type { ComponentDef, ParamDef } from "./types";
+import type { ComponentDef, ParamDef, SymbolProps } from "./types";
 
 const BODY_W = 120;
 const BODY_TOP = 10;
@@ -15,6 +15,8 @@ const ROD_OUT = 30;
 const WIDTH = BODY_W + ROD_OUT;
 const HEIGHT = BODY_TOP + BODY_H + 10;
 const PISTON_X = 8;
+/** Comprimento da haste: com o cilindro recuado, ela sai ROD_OUT para fora do corpo. */
+const ROD_LENGTH = BODY_W - PISTON_X - 4 + ROD_OUT;
 
 export interface CylinderSpec {
   type: string;
@@ -38,9 +40,8 @@ export function makeCylinderDef(spec: CylinderSpec): ComponentDef {
     params.push({ key: "springForce", type: "number", unit: "N", default: 30, min: 0, max: 5000 });
   }
 
-  function CylinderSymbol() {
-    // Fase 1: haste recuada. Na Fase 2 `extension` (0–1) vem do estado da simulação.
-    const extension = 0;
+  function CylinderSymbol({ state }: SymbolProps) {
+    const extension = state?.extension ?? 0;
     const travel = BODY_W - 2 * PISTON_X - 4;
     const px = PISTON_X + extension * travel;
     return (
@@ -49,9 +50,10 @@ export function makeCylinderDef(spec: CylinderSpec): ComponentDef {
         {/* êmbolo */}
         <rect className="sym-solid" x={px} y={BODY_TOP + 1} width={4} height={BODY_H - 2} />
         {/* haste */}
-        <rect className="sym sym-bg" x={px + 4} y={CY - 3} width={BODY_W - px - 4 + ROD_OUT} height={6} />
+        <rect className="sym sym-bg" x={px + 4} y={CY - 3} width={ROD_LENGTH} height={6} />
         <line className="sym" x1={BODY_W} y1={BODY_TOP} x2={BODY_W} y2={BODY_TOP + BODY_H} />
-        {spec.singleActing && <Spring x1={px + 8} x2={BODY_W - 4} y={CY - 9} amp={4} turns={5} />}
+        {/* mola na câmara da haste: comprime conforme a haste avança (fica visível mesmo toda comprimida) */}
+        {spec.singleActing && <Spring x1={Math.min(px + 8, BODY_W - 12)} x2={BODY_W - 4} y={CY - 9} amp={4} turns={5} />}
         {/* conectores */}
         <line className="sym" x1={10} y1={BODY_TOP + BODY_H} x2={10} y2={HEIGHT} />
         {spec.singleActing ? (
@@ -80,6 +82,7 @@ export function makeCylinderDef(spec: CylinderSpec): ComponentDef {
         ],
     params,
     keywords: spec.keywords,
+    sim: spec.domain === "pneumatic" ? { kind: "cylinder", singleActing: spec.singleActing } : undefined,
     Symbol: CylinderSymbol,
   };
 }

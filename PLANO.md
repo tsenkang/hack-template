@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 1 — Base** concluída. Aguardando OK para iniciar a Fase 2.
+> Status: **Fase 2 — Pneumática simples** concluída. Aguardando OK para iniciar a Fase 3.
 
 ---
 
@@ -162,5 +162,31 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - Antecipados de outras fases, porque saíram baratos: exportar SVG/PNG (Fase 7) e pinça/arraste no toque (Fase 7, versão básica).
 - Ficou para a Fase 2: ligar linhas entre conectores (o modelo `Connection` já existe) e os controles da simulação, que já aparecem na barra mas estão desativados.
 
+### Fase 2 — Pneumática simples ✅
+- **Ligar linhas arrastando** de um conector até outro. O app "gruda" no conector compatível mais próximo e traça o tubo sozinho, só com linhas a 90°, desviando das peças (busca A* com penalidade por curva). Conectores soltos aparecem como anéis vazados, e um ponto cheio marca onde as linhas se juntam. Linhas podem ser selecionadas e apagadas, e copiar/colar leva junto as linhas entre as peças copiadas.
+- **19 peças pneumáticas simuladas**: fonte de ar, unidade de conservação (regulador com alívio), manômetro com ponteiro, silenciador, ponto de ligação (T), cilindros de simples e dupla ação, válvulas 3/2 NF/NA (botão, alavanca, rolete, piloto), 5/2 (duplo piloto, piloto/mola, solenoide/mola, duplo solenoide), retenção e reguladora de vazão unidirecional.
+- **Motor de simulação** (`src/engine`, sem React), rodando num Web Worker:
+  - ar compressível com vazão pelo modelo ISO 6358;
+  - redes resolvidas por análise nodal implícita com Newton + busca linear;
+  - câmaras dos cilindros com volume variável (isotérmico) e mecânica da haste com atrito, em 8 subpassos;
+  - êmbolo das válvulas com tempo de comutação e recobrimento;
+  - pilotagem a partir de 1,5 bar;
+  - roletes acionados pela posição da haste (rótulo do cilindro + % do curso);
+  - conectores soltos escapam para a atmosfera.
+- **Na tela**:
+  - controles iniciar/pausar/parar, avançar 10 ms e velocidade de 0,1× a 10×, com atalhos F5 e Esc;
+  - linhas coloridas pela pressão (também mais grossas, para não depender só da cor), legenda recolhível e traços animados no sentido do fluxo;
+  - corpo das válvulas desliza como no FluidSIM;
+  - clicar e segurar botões, alavancas, roletes e o acionamento manual dos solenoides;
+  - parâmetros (ex.: pressão do regulador, abertura da reguladora de vazão) mudam com a simulação rodando;
+  - edição travada enquanto simula.
+- **Testes**: 105 unitários (inclui cilindro SA, cilindro DA, 5/2 pilotada com memória e sinal preso, retorno automático por rolete, controle de velocidade, retenção, regulador e roteamento) + 12 de tela (inclui montar o circuito com o mouse e simular).
+- **Desempenho medido**: um circuito com 121 peças (201 redes) simula 2× mais rápido que o tempo real; os circuitos de aula, bem mais rápido.
+
+**Decisões da Fase 2**
+- O corpo inteiro da válvula desliza ao comutar (como no FluidSIM). O conector de piloto fica fixo, e a linha de comando estica até o acionamento.
+- O solver usa matriz densa, que é simples e suficiente para circuitos de aula. Se um circuito muito grande ficar lento em 10×, a troca por um solver esparso entra na Fase 7, sem mudar o resto do motor.
+- Peças elétricas e hidráulicas ainda não simulam (Fases 4 e 5). Por enquanto, o clique no solenoide funciona como o acionamento manual de emergência que as válvulas reais têm.
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 2 — Pneumática simples**.
+Com o OK do usuário: **Fase 3 — Pneumática completa** (resto da biblioteca, temporizador, contador, diagrama de fases, detector de erros, inserir peça sobre uma linha).

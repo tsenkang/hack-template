@@ -14,6 +14,7 @@ import { airSource } from "./pneumatic/air-source";
 import { checkValve } from "./pneumatic/check-valve";
 import * as pneuCylinders from "./pneumatic/cylinders";
 import { flowControlOneWay } from "./pneumatic/flow-control";
+import { junction } from "./pneumatic/junction";
 import { pressureGauge } from "./pneumatic/pressure-gauge";
 import { serviceUnit } from "./pneumatic/service-unit";
 import { silencer } from "./pneumatic/silencer";
@@ -26,6 +27,7 @@ export const COMPONENT_DEFS: readonly ComponentDef[] = [
   serviceUnit,
   pressureGauge,
   silencer,
+  junction,
   ...Object.values(pneuCylinders),
   ...Object.values(pneuValves),
   checkValve,

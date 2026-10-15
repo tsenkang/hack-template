@@ -91,3 +91,43 @@ describe("editor", () => {
     expect(a.x).toBe(b.x);
   });
 });
+
+describe("linhas", () => {
+  const circuit = () => selectActiveCircuit(s());
+
+  it("liga dois conectores, sem duplicar nem ligar um conector nele mesmo", () => {
+    const a = s().addComponent("pneu.source.air", { x: 0, y: 0 })!;
+    const b = s().addComponent("pneu.silencer", { x: 100, y: 0 })!;
+    expect(s().addConnection({ componentId: a, portId: "1" }, { componentId: b, portId: "1" })).not.toBeNull();
+    expect(s().addConnection({ componentId: b, portId: "1" }, { componentId: a, portId: "1" })).toBeNull();
+    expect(s().addConnection({ componentId: a, portId: "1" }, { componentId: a, portId: "1" })).toBeNull();
+    expect(circuit().connections).toHaveLength(1);
+  });
+
+  it("apagar uma peça apaga as linhas dela; apagar a linha selecionada mantém as peças", () => {
+    const a = s().addComponent("pneu.source.air", { x: 0, y: 0 })!;
+    const b = s().addComponent("pneu.silencer", { x: 100, y: 0 })!;
+    const w = s().addConnection({ componentId: a, portId: "1" }, { componentId: b, portId: "1" })!;
+    s().select([w]);
+    s().deleteSelection();
+    expect(circuit().connections).toHaveLength(0);
+    expect(circuit().components).toHaveLength(2);
+    s().undo();
+    s().select([b]);
+    s().deleteSelection();
+    expect(circuit().connections).toHaveLength(0);
+  });
+
+  it("copiar e colar leva junto as linhas entre as peças copiadas", () => {
+    const a = s().addComponent("pneu.source.air", { x: 0, y: 0 })!;
+    const b = s().addComponent("pneu.silencer", { x: 100, y: 0 })!;
+    s().addConnection({ componentId: a, portId: "1" }, { componentId: b, portId: "1" });
+    s().select([a, b]);
+    s().copySelection();
+    s().paste();
+    expect(circuit().components).toHaveLength(4);
+    expect(circuit().connections).toHaveLength(2);
+    const copy = circuit().connections[1];
+    expect(s().selection).toContain(copy.from.componentId);
+  });
+});

@@ -15,6 +15,7 @@ export const checkValve: ComponentDef = {
   ],
   params: [{ key: "crackingPressure", type: "number", unit: "bar", default: 0.1, min: 0, max: 5, step: 0.05 }],
   keywords: ["retenção", "unidirecional", "bloqueio"],
+  sim: { kind: "check-valve" },
   Symbol: () => (
     <g>
       <line className="sym" x1={0} y1={10} x2={13} y2={10} />

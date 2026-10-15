@@ -80,6 +80,19 @@ export const valve32ncLever = makeValveDef({
   keywords: ["alavanca", "manual"],
 });
 
+export const valve32ncPilot = makeValveDef({
+  type: "pneu.valve.3-2-nc.pilot-spring",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "pilot",
+  right: "spring",
+  pilotIds: { left: "12" },
+  keywords: ["piloto", "comando indireto", "amplificadora"],
+});
+
 export const valve52pilot = makeValveDef({
   type: "pneu.valve.5-2.pilot-pilot",
   domain: "pneumatic",

@@ -1,7 +1,31 @@
 import { Arrow } from "../draw";
-import type { ComponentDef } from "../types";
+import type { ComponentDef, SymbolProps } from "../types";
 
-/** Manômetro: mede a pressão no ponto em que é ligado. */
+/** Ângulo do ponteiro: −135° (zero) a +135° (fundo de escala); 45° no modo de edição. */
+function needleAngle(pressure: number | undefined, range: number) {
+  if (pressure === undefined) return 45;
+  return -135 + 270 * Math.min(1, Math.max(0, pressure / range));
+}
+
+function GaugeSymbol({ params, state }: SymbolProps) {
+  const range = typeof params.range === "number" ? params.range : 10;
+  const rad = ((needleAngle(state?.pressure, range) - 90) * Math.PI) / 180;
+  const r = 7;
+  return (
+    <g>
+      <circle className="sym sym-bg" cx={10} cy={11} r={9} />
+      <Arrow from={[10 - r * Math.cos(rad), 11 - r * Math.sin(rad)]} to={[10 + r * Math.cos(rad), 11 + r * Math.sin(rad)]} head={3.5} />
+      <line className="sym" x1={10} y1={20} x2={10} y2={30} />
+      {state?.pressure !== undefined && (
+        <text className="sym-text" x={22} y={24} fontSize={8}>
+          {state.pressure.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bar
+        </text>
+      )}
+    </g>
+  );
+}
+
+/** Manômetro: mede a pressão no ponto em que é ligado. Na simulação o ponteiro se move. */
 export const pressureGauge: ComponentDef = {
   type: "pneu.gauge.pressure",
   domain: "pneumatic",
@@ -12,11 +36,6 @@ export const pressureGauge: ComponentDef = {
   ports: [{ id: "1", x: 10, y: 30, kind: "pneumatic" }],
   params: [{ key: "range", type: "number", unit: "bar", default: 10, min: 1, max: 400 }],
   keywords: ["medidor", "pressão"],
-  Symbol: () => (
-    <g>
-      <circle className="sym sym-bg" cx={10} cy={11} r={9} />
-      <Arrow from={[4, 17]} to={[16, 5]} head={3.5} />
-      <line className="sym" x1={10} y1={20} x2={10} y2={30} />
-    </g>
-  ),
+  sim: { kind: "gauge" },
+  Symbol: GaugeSymbol,
 };

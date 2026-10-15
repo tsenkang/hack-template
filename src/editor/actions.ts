@@ -1,5 +1,8 @@
 /** Ações do editor usadas por botões, atalhos e menus (sem React). */
+import { t } from "@/i18n";
 import { selectActiveCircuit, selectViewport, useEditor } from "@/store/editor-store";
+import { isSimulating } from "@/store/sim-store";
+import { toast } from "@/store/toast-store";
 import { getDef } from "@/symbols/registry";
 import { componentBounds, fitRect, unionRects, zoomAt, type Rect } from "./geometry";
 
@@ -28,6 +31,10 @@ export function zoomBy(factor: number) {
 
 /** Insere a peça no centro da área visível (duplo clique na biblioteca). */
 export function insertAtCenter(type: string) {
+  if (isSimulating()) {
+    toast(t("sim.locked"));
+    return;
+  }
   const s = useEditor.getState();
   const v = selectViewport(s);
   const { w, h } = s.canvasSize;
