@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 4 — Elétrica** concluída. Aguardando OK para iniciar a Fase 5.
+> Status: **Fase 5 — Hidráulica** concluída. Aguardando OK para iniciar a Fase 6.
 
 ---
 
@@ -259,5 +259,41 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - **Corrente alternada**: 220 V CA é tratada pelo valor eficaz, o que basta para o comando: liga/desliga, sobretensão e curto.
 - **Um clique rápido nunca se perde**: um botão apertado e solto entre dois passos fica apertado por pelo menos um passo da simulação.
 
+### Fase 5 — Hidráulica ✅
+- **37 peças hidráulicas**:
+  - alimentação: motobomba fixa e variável com compensador de pressão, tanque;
+  - condicionamento e medição: filtro, resfriador, aquecedor, acumulador a gás, manômetro, medidor de vazão, termômetro, ponto de ligação;
+  - atuadores: cilindros de simples ação, dupla ação, com amortecimento e de haste dupla; motor hidráulico;
+  - direcionais: 2/2, 3/2, 4/2 (solenoide e alavanca com trava), 4/3 de centro fechado, aberto, tandem e flutuante, 4/3 com alavanca;
+  - pressão: alívio, redutora, sequência, contrabalanço;
+  - vazão: estrangulador fixo, ajustável e unidirecional, reguladora compensada;
+  - bloqueio: retenção e retenção pilotada;
+  - controle contínuo: válvula proporcional e servoválvula (comando de −100% a 100%, ajustável com a simulação rodando).
+- **Motor**:
+  - a rede de fluido virou genérica (`FluidNetwork` + "meio" ar/óleo): o mesmo solver implícito resolve o ar e o óleo, só muda a física de cada nó (ar como gás ideal; óleo com módulo de compressibilidade de 1 GPa) e a lei de vazão (turbulenta, Q ∝ √Δp);
+  - os subpassos da mecânica se ajustam sozinhos à "mola" de óleo, que é muito mais dura que a de ar;
+  - bomba como fonte de vazão; acumulador com gás (p·V constante); motor hidráulico com torque de carga;
+  - válvulas de pressão abrindo numa faixa estreita em torno do ajuste.
+- **Eletro-hidráulica**: os solenoides Y1/Y2 das válvulas hidráulicas são comandados pelo esquema elétrico, igual à eletropneumática.
+- **Na tela**: óleo com pressão em laranja (mais forte = mais pressão), retorno ao tanque em azul-esverdeado, óleo parado em tom claro, com fluxo animado e legenda própria. Linhas de piloto/dreno ficam tracejadas.
+- **Detector de erros**: circuito sem bomba, sucção da bomba fora do tanque, conector de óleo solto (fica tampado no simulador).
+  - **Correção**: projetos só elétricos ou só hidráulicos não acusam mais "falta fonte de ar" (defeito que vinha da Fase 4).
+- **Testes**: 327 unitários. Os de hidráulica:
+  - **alívio limitando a pressão** em 100 bar (±8%);
+  - velocidade do cilindro = vazão ÷ área (±25%);
+  - centro tandem descarregando a bomba e centro fechado segurando o cilindro;
+  - reguladora compensada com a mesma velocidade sem carga e com 6 kN (diferença abaixo de 10% e valor absoluto ±15%);
+  - acumulador (≈50% de carga a 100 bar com pré-carga de 50 bar);
+  - motor (rpm = vazão ÷ deslocamento);
+  - retenção pilotada segurando a carga;
+  - eletro-hidráulica.
+
+  E 18 de tela, incluindo o exemplo `e2e/fixtures/electro-hydraulic.json`.
+
+**Decisões da Fase 5**
+- **Conector de óleo solto fica tampado** no simulador (em vez de "derramar"). Assim a simulação continua estável, e o detector de erros avisa.
+- **Trepidação em baixa velocidade**: um teste mostrou que, em velocidade baixa, o cilindro hidráulico trepidava (*stick-slip*). A trepidação existe na prática, mas aqui estava exagerada. Por isso o cilindro hidráulico usa amortecimento viscoso de 10 000 N·s/m e atrito de partida de 1% da força a 100 bar, valores típicos de vedações em óleo. O pneumático continua com os valores anteriores.
+- **Temperatura do óleo** não é simulada: o termômetro mostra o valor ajustado, e o motor usa as propriedades do óleo a 40 °C.
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 5 — Hidráulica** (bomba, tanque, alívio, cilindros e motores, 4/3 com todos os centros, válvulas de pressão e vazão, acumulador e eletro-hidráulica).
+Com o OK do usuário: **Fase 6 — Interatividade avançada** (modo Explique, medições e gráficos, modos Aluno/Professor, exercícios guiados, biblioteca de 40+ circuitos prontos, GRAFCET e CLP simples, paleta Ctrl+K).

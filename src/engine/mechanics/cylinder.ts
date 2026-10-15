@@ -36,7 +36,20 @@ export class Cylinder implements MechanicalElement {
   position = 0;
   velocity = 0;
 
-  constructor(ctx: BuildContext, opts: { singleActing: boolean; throughRod?: boolean; cushioned?: boolean }) {
+  /** Pressão de referência para o atrito (6 bar no ar, 100 bar no óleo) e amortecimento viscoso. */
+  private readonly refPressure: number;
+  private readonly viscous: number;
+  private readonly coulombFraction: number;
+
+  constructor(
+    ctx: BuildContext,
+    opts: { singleActing: boolean; throughRod?: boolean; cushioned?: boolean },
+    domain: "pneumatic" | "hydraulic" = "pneumatic",
+  ) {
+    this.refPressure = domain === "hydraulic" ? 100e5 : 6e5;
+    // Óleo: vedações e o próprio óleo amortecem bem mais (evita trepidação em baixa velocidade).
+    this.viscous = domain === "hydraulic" ? 10000 : VISCOUS;
+    this.coulombFraction = domain === "hydraulic" ? 0.01 : 0.02;
     const { singleActing } = opts;
     this.id = ctx.comp.id;
     this.label = ctx.comp.label;
@@ -63,13 +76,13 @@ export class Cylinder implements MechanicalElement {
   private get load() {
     return num(this.params.load, 0);
   }
-  /** Massa em movimento: êmbolo + haste, mais a carga se ela for um peso. */
-  private get mass() {
-    return 0.3 + Math.max(0, this.load) / 9.81;
+  /** Massa em movimento: a ajustada, ou êmbolo + haste + a carga se ela for um peso. */
+  get mass() {
+    return typeof this.params.mass === "number" ? Math.max(0.05, this.params.mass) : 0.3 + Math.max(0, this.load) / 9.81;
   }
-  /** Atrito de Coulomb: parte fixa + ~2% da força a 6 bar. */
+  /** Atrito de Coulomb: parte fixa + uma fração (2% no ar, 1% no óleo) da força na pressão de referência. */
   private get coulomb() {
-    return 8 + 0.02 * this.areaPiston * 6e5;
+    return 8 + this.coulombFraction * this.areaPiston * this.refPressure;
   }
   /** Freio do amortecimento: só nos últimos milímetros, no sentido em que a haste vai. */
   private cushion(): number {
@@ -85,9 +98,9 @@ export class Cylinder implements MechanicalElement {
   }
 
   chambers() {
-    const out = [{ net: this.netA, volume: PORT_VOLUME + this.areaA * (DEAD_LENGTH + this.position) }];
+    const out = [{ net: this.netA, volume: PORT_VOLUME + this.areaA * (DEAD_LENGTH + this.position), area: this.areaA }];
     if (this.netB !== null) {
-      out.push({ net: this.netB, volume: PORT_VOLUME + this.areaB * (DEAD_LENGTH + this.stroke - this.position) });
+      out.push({ net: this.netB, volume: PORT_VOLUME + this.areaB * (DEAD_LENGTH + this.stroke - this.position), area: this.areaB });
     }
     return out;
   }
@@ -109,7 +122,7 @@ export class Cylinder implements MechanicalElement {
     }
     const before = this.velocity;
     // Amortecimento viscoso tratado de forma implícita: estável mesmo com o colchão de ar bem fechado.
-    const damping = ((VISCOUS + this.cushion()) * h) / this.mass;
+    const damping = ((this.viscous + this.cushion()) * h) / this.mass;
     this.velocity = (this.velocity + (force / this.mass) * h) / (1 + damping);
     // O atrito não pode inverter o movimento sozinho: se cruzou o zero, para.
     if (before !== 0 && Math.sign(before) !== Math.sign(this.velocity) && Math.sign(drive) !== Math.sign(this.velocity)) {

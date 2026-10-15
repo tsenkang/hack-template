@@ -22,7 +22,10 @@ export type DiagnosticCode =
   | "no-elec-supply"
   | "unknown-coil"
   | "unknown-solenoid"
-  | "unused-solenoid";
+  | "unused-solenoid"
+  | "no-hyd-supply"
+  | "open-port-oil"
+  | "pump-no-tank";
 
 export interface Diagnostic {
   severity: Severity;
@@ -45,20 +48,25 @@ const SHARED_POINT: readonly string[] = ["junction", "reservoir"];
 export function checkProject(project: Project, lookup: (type: string) => DiagnosticPartInfo | undefined): Diagnostic[] {
   const out: Diagnostic[] = [];
   const cylinders = new Set<string>();
-  let hasPneumatic = false;
-  let hasSupply = false;
+  const has = { pneumatic: false, hydraulic: false, airSupply: false, pump: false };
 
   for (const circuit of project.circuits) {
     for (const comp of circuit.components) {
-      const spec = lookup(comp.type)?.sim;
-      if (!spec) continue;
-      hasPneumatic = true;
-      if (spec.kind === "air-source") hasSupply = true;
+      const info = lookup(comp.type);
+      const spec = info?.sim;
+      if (!info || !spec) continue;
+      if (info.domain === "pneumatic") has.pneumatic = true;
+      if (info.domain === "hydraulic") has.hydraulic = true;
+      if (spec.kind === "air-source") has.airSupply = true;
+      if (spec.kind === "hyd-pump") has.pump = true;
       if (spec.kind === "cylinder") cylinders.add(comp.label);
     }
   }
-  if (hasPneumatic && !hasSupply) {
+  if (has.pneumatic && !has.airSupply) {
     out.push({ severity: "error", code: "no-supply", circuitId: project.circuits[0].id });
+  }
+  if (has.hydraulic && !has.pump) {
+    out.push({ severity: "error", code: "no-hyd-supply", circuitId: project.circuits[0].id });
   }
 
   const labels = new Map<string, { circuitId: string; componentId: string }[]>();
@@ -74,16 +82,17 @@ export function checkProject(project: Project, lookup: (type: string) => Diagnos
       }
       if (!spec) continue;
 
-      const ports = info.ports.filter((p) => p.kind === "pneumatic" || p.kind === "pilot");
+      const ports = info.ports.filter((p) => p.kind !== "electric");
       const anyConnected = ports.some((p) => connected.has(`${comp.id}:${p.id}`));
       for (const port of ports) {
         if (connected.has(`${comp.id}:${port.id}`) || port.exhaust) continue;
         if (SHARED_POINT.includes(spec.kind) && anyConnected) continue;
-        if (port.kind === "pilot") {
-          out.push({ severity: "info", code: "open-pilot", circuitId: circuit.id, componentId: comp.id, port: port.id });
-        } else if (spec.kind !== "gauge") {
-          out.push({ severity: "warning", code: "open-port", circuitId: circuit.id, componentId: comp.id, port: port.id });
-        }
+        const at = { circuitId: circuit.id, componentId: comp.id, port: port.id };
+        if (port.kind === "pilot" || port.kind === "hydraulic-pilot") out.push({ severity: "info", code: "open-pilot", ...at });
+        else if (spec.kind === "hyd-pump" && port.id === "S") out.push({ severity: "error", code: "pump-no-tank", ...at });
+        else if (spec.kind === "gauge" || spec.kind.startsWith("elec-")) continue;
+        else if (port.kind === "hydraulic") out.push({ severity: "warning", code: "open-port-oil", ...at });
+        else out.push({ severity: "warning", code: "open-port", ...at });
       }
 
       if (spec.kind === "valve" && [spec.left, spec.right].some((a) => POSITION_ACTUATORS.includes(a))) {

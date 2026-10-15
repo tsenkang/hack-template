@@ -47,10 +47,12 @@ function buildNets(keys: Iterable<string>, uf: UnionFind) {
   return { nets, netOf: (k: string) => index.get(uf.find(k))! };
 }
 
+/** Peças em que todos os conectores são o mesmo ponto. */
+const SHARED_POINT = new Set(["junction", "reservoir"]);
+
 export function compileProject(project: Project, lookup: (type: string) => PartInfo | undefined): SimCircuit {
   const components: SimComponent[] = [];
-  const known = new Set<string>();
-  const knownElec = new Set<string>();
+  const known = { pneumatic: new Set<string>(), hydraulic: new Set<string>(), electric: new Set<string>() };
   const uf = new UnionFind();
 
   for (const circuit of project.circuits) {
@@ -66,35 +68,49 @@ export function compileProject(project: Project, lookup: (type: string) => PartI
           .map((p) => ({ id: p.id, ventsWhenOpen: p.kind === "pneumatic" && !closedWhenOpen, exhaust: Boolean(p.exhaust) })),
         ...internalPorts(spec).map((id) => ({ id, ventsWhenOpen: false, exhaust: false })),
       ];
-      for (const p of ports) known.add(portKey(comp.id, p.id));
+      // Óleo: conector solto fica tampado (o detector de erros avisa).
+      const hydPorts = info.ports
+        .filter((p) => p.kind === "hydraulic" || p.kind === "hydraulic-pilot")
+        .map((p) => ({ id: p.id, ventsWhenOpen: false, exhaust: false }));
       const elecPorts = info.ports.filter((p) => p.kind === "electric").map((p) => p.id);
-      for (const id of elecPorts) knownElec.add(portKey(comp.id, id));
-      // Ponto de ligação e reservatório: todos os conectores são o mesmo ponto.
-      if (spec.kind === "junction" || spec.kind === "reservoir") {
-        for (const p of ports.slice(1)) uf.union(portKey(comp.id, ports[0].id), portKey(comp.id, p.id));
+      for (const p of ports) known.pneumatic.add(portKey(comp.id, p.id));
+      for (const p of hydPorts) known.hydraulic.add(portKey(comp.id, p.id));
+      for (const id of elecPorts) known.electric.add(portKey(comp.id, id));
+      if (SHARED_POINT.has(spec.kind)) {
+        const all = [...ports, ...hydPorts];
+        for (const p of all.slice(1)) uf.union(portKey(comp.id, all[0].id), portKey(comp.id, p.id));
       }
-      components.push({ id: comp.id, label: comp.label, spec, params: { ...comp.params }, ports, elecPorts });
+      components.push({ id: comp.id, label: comp.label, spec, params: { ...comp.params }, ports, hydPorts, elecPorts });
     }
   }
+
+  const domainOf = (k: string) =>
+    known.electric.has(k) ? "electric" : known.hydraulic.has(k) ? "hydraulic" : known.pneumatic.has(k) ? "pneumatic" : null;
 
   const wires: SimCircuit["wires"] = [];
   for (const circuit of project.circuits) {
     for (const w of circuit.connections) {
       const from = portKey(w.from.componentId, w.from.portId);
       const to = portKey(w.to.componentId, w.to.portId);
-      const electric = knownElec.has(from) && knownElec.has(to);
-      if (!electric && (!known.has(from) || !known.has(to))) continue;
+      const domain = domainOf(from);
+      if (!domain || domain !== domainOf(to)) continue;
       uf.union(from, to);
-      wires.push({ id: w.id, from, to, electric });
+      wires.push({ id: w.id, from, to, domain });
     }
   }
 
-  const fluid = buildNets(known, uf);
-  const elec = buildNets(knownElec, uf);
-  for (const w of wires) {
-    const target = w.electric ? elec : fluid;
-    target.nets[target.netOf(w.from)].wires.push(w.id);
-  }
+  const nets = {
+    pneumatic: buildNets(known.pneumatic, uf),
+    hydraulic: buildNets(known.hydraulic, uf),
+    electric: buildNets(known.electric, uf),
+  };
+  for (const w of wires) nets[w.domain].nets[nets[w.domain].netOf(w.from)].wires.push(w.id);
 
-  return { components, nets: fluid.nets, elecNets: elec.nets, wires };
+  return {
+    components,
+    nets: nets.pneumatic.nets,
+    hydNets: nets.hydraulic.nets,
+    elecNets: nets.electric.nets,
+    wires,
+  };
 }

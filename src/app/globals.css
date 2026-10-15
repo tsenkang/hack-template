@@ -32,6 +32,9 @@
   --elec-energized: #fb923c;
   --wire-current: #dc2626;
   --wire-voltage: #f19a9a;
+  --oil-pressure: #c2410c;
+  --oil-return: #0e7490;
+  --oil-empty: #e7c3a8;
   color-scheme: light;
 }
 
@@ -61,6 +64,9 @@
   --elec-energized: #f97316;
   --wire-current: #f87171;
   --wire-voltage: #7f3b3b;
+  --oil-pressure: #fb923c;
+  --oil-return: #22d3ee;
+  --oil-empty: #5c4030;
   color-scheme: dark;
 }
 
@@ -157,6 +163,7 @@ body {
 .port-pneumatic { fill: var(--port-pneumatic); }
 .port-hydraulic { fill: var(--port-hydraulic); }
 .port-pilot { fill: var(--port-pilot); }
+.port-hydraulic-pilot { fill: var(--port-hydraulic); }
 .port-electric { fill: var(--port-electric); }
 .component.interactive {
   cursor: pointer;
@@ -236,11 +243,27 @@ body {
   stroke: var(--line-pressure);
   stroke-width: 2.6;
 }
+.legend-oil {
+  stroke: var(--oil-pressure);
+}
 .legend-pressure {
   stroke: var(--line-pressure);
 }
 .wire-empty {
   stroke: var(--line-empty);
+  stroke-width: 1.5;
+}
+/* Óleo: com pressão = laranja forte e grosso; retorno ao tanque = azul-esverdeado; sem pressão = claro. */
+.wire-oil-pressure {
+  stroke: var(--oil-pressure);
+  stroke-width: 2.6;
+}
+.wire-oil-return {
+  stroke: var(--oil-return);
+  stroke-width: 2;
+}
+.wire-oil-empty {
+  stroke: var(--oil-empty);
   stroke-width: 1.5;
 }
 /* Fios: com corrente = vermelho forte e grosso; só com tensão = vermelho claro; sem tensão = cinza. */

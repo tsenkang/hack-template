@@ -11,6 +11,21 @@ export const PRESSURE_ON = 0.2;
 /** Pressão de referência para a cor mais forte. */
 const PRESSURE_FULL = 6;
 
+/** Óleo: "com pressão" acima disto [bar]; cor mais forte em OIL_FULL; retorno com vazão acima de OIL_RETURN_Q [l/min]. */
+const OIL_ON = 5;
+const OIL_FULL = 200;
+const OIL_RETURN_Q = 0.2;
+
+/** Animação do fluxo de óleo (vazões bem menores que as de ar). */
+function oilDuration(qLmin: number): number | null {
+  const q = Math.abs(qLmin);
+  if (q < OIL_RETURN_Q) return null;
+  if (q < 2) return 1.6;
+  if (q < 10) return 0.9;
+  if (q < 40) return 0.55;
+  return 0.35;
+}
+
 /** Fio "vivo": tensão acima disto [V]; com corrente: acima disto [mA]. */
 const LIVE_VOLTS = 1;
 const CURRENT_MA = 1;
@@ -45,8 +60,8 @@ interface Props {
   traced: boolean;
   /** Linha de comando (piloto): tracejada. */
   pilot: boolean;
-  /** Fio elétrico (estado = tensão em V e corrente em mA). */
-  electric: boolean;
+  /** Domínio: ar, óleo ou fio elétrico (no fio, o estado é tensão em V e corrente em mA). */
+  domain: "pneumatic" | "hydraulic" | "electric";
   state?: WireSimState;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
 }
@@ -56,9 +71,35 @@ interface Props {
  * mostram para onde o ar anda. A forma da linha (espessura, tracejado) também
  * muda, para não depender só da cor.
  */
-export const WireView = memo(function WireView({ id, points, selected, traced, pilot, electric, state, onPointerDown }: Props) {
+export const WireView = memo(function WireView({ id, points, selected, traced, pilot, domain, state, onPointerDown }: Props) {
   const d = pointsToPath(points);
-  if (electric) {
+  if (domain === "hydraulic") {
+    const pressurized = state !== undefined && state.p > OIL_ON;
+    const level = state ? Math.min(1, Math.max(0, state.p / OIL_FULL)) : 0;
+    const duration = state ? oilDuration(state.q) : null;
+    const returning = state !== undefined && !pressurized && duration !== null;
+    return (
+      <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
+        <path className="wire-hit" d={d} />
+        {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
+        <path
+          className={clsx(
+            "wire",
+            pilot && "wire-pilot",
+            state && (pressurized ? "wire-oil-pressure" : returning ? "wire-oil-return" : "wire-oil-empty"),
+          )}
+          style={
+            pressurized ? { stroke: `color-mix(in srgb, var(--oil-pressure) ${Math.round(55 + 45 * level)}%, var(--oil-empty))` } : undefined
+          }
+          d={d}
+        />
+        {duration !== null && (
+          <path className={clsx("wire-flow", state!.q < 0 && "reverse")} style={{ animationDuration: `${duration}s` }} d={d} data-export-ignore />
+        )}
+      </g>
+    );
+  }
+  if (domain === "electric") {
     const live = state !== undefined && Math.abs(state.p) > LIVE_VOLTS;
     const duration = state ? currentDuration(state.q) : null;
     return (

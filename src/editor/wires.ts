@@ -27,9 +27,9 @@ export function allPorts(circuit: Circuit): PortInfo[] {
   );
 }
 
-/** Que tipos de conector podem ser ligados entre si. Piloto é linha pneumática de comando. */
+/** Que tipos de conector podem ser ligados entre si. Piloto é linha de comando do mesmo fluido. */
 export function canConnect(a: PortKind, b: PortKind): boolean {
-  const family = (k: PortKind) => (k === "pilot" ? "pneumatic" : k);
+  const family = (k: PortKind) => (k === "pilot" ? "pneumatic" : k === "hydraulic-pilot" ? "hydraulic" : k);
   return family(a) === family(b);
 }
 

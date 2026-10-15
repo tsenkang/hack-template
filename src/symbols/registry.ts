@@ -6,9 +6,12 @@ import * as electricOutputs from "./electric/outputs";
 import * as electricProtection from "./electric/protection";
 import * as electricSupply from "./electric/supply";
 import * as electricSwitches from "./electric/switches";
+import * as hydConditioning from "./hydraulic/conditioning";
 import * as hydCylinders from "./hydraulic/cylinders";
-import { pumpFixed } from "./hydraulic/pump";
-import { reliefValve } from "./hydraulic/relief-valve";
+import * as hydFlowValves from "./hydraulic/flow-valves";
+import { hydMotor } from "./hydraulic/motor";
+import * as hydPumps from "./hydraulic/pump";
+import * as hydPressureValves from "./hydraulic/relief-valve";
 import { tank } from "./hydraulic/tank";
 import * as hydValves from "./hydraulic/valves";
 import * as pneuActuatorsExtra from "./pneumatic/actuators-extra";
@@ -43,11 +46,14 @@ export const COMPONENT_DEFS: readonly ComponentDef[] = [
   ...Object.values(pneuLogic),
   ...Object.values(pneuPressure),
   ...Object.values(pneuSignal),
-  pumpFixed,
+  ...Object.values(hydPumps),
   tank,
+  ...Object.values(hydConditioning),
   ...Object.values(hydCylinders),
-  reliefValve,
+  hydMotor,
   ...Object.values(hydValves),
+  ...Object.values(hydPressureValves),
+  ...Object.values(hydFlowValves),
   ...Object.values(electricSupply),
   ...Object.values(electricSwitches),
   ...Object.values(electricOutputs),

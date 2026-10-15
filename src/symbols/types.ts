@@ -7,7 +7,7 @@ import type { CategoryId } from "./categories";
 export const GRID = 10;
 
 /** Tipo de conector: define o que pode ser ligado com o quê. */
-export type PortKind = "pneumatic" | "hydraulic" | "pilot" | "electric";
+export type PortKind = "pneumatic" | "hydraulic" | "pilot" | "hydraulic-pilot" | "electric";
 
 /** Conector de uma peça, em coordenadas locais do símbolo (antes de girar/espelhar). */
 export interface PortDef {

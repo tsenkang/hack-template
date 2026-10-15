@@ -86,7 +86,7 @@ export function Canvas() {
     const openPorts = new Map<string, string>();
     const junctions: Point[] = [];
     const pilotWires = new Set<string>();
-    const electricWires = new Set<string>();
+    const wireDomain = new Map<string, "pneumatic" | "hydraulic" | "electric">();
     for (const comp of circuit.components) {
       const def = getDef(comp.type);
       if (!def) continue;
@@ -98,9 +98,11 @@ export function Canvas() {
     );
     for (const w of circuit.connections) {
       if (kindOf.get(portKey(w.from)) === "pilot" || kindOf.get(portKey(w.to)) === "pilot") pilotWires.add(w.id);
-      if (kindOf.get(portKey(w.from)) === "electric") electricWires.add(w.id);
+      const kind = kindOf.get(portKey(w.from));
+      wireDomain.set(w.id, kind === "electric" ? "electric" : kind === "hydraulic" || kind === "hydraulic-pilot" ? "hydraulic" : "pneumatic");
+      if (kind === "hydraulic-pilot" || kindOf.get(portKey(w.to)) === "hydraulic-pilot") pilotWires.add(w.id);
     }
-    return { openPorts, junctions, pilotWires, electricWires, nets: wireNets(circuit) };
+    return { openPorts, junctions, pilotWires, wireDomain, nets: wireNets(circuit) };
   }, [circuit]);
 
   /** Rastro do sinal: com uma linha selecionada, destaca todas as linhas ligadas a ela. */
@@ -443,7 +445,7 @@ export function Canvas() {
                   selected={selected.has(w.id)}
                   traced={traced.has(w.id)}
                   pilot={topology.pilotWires.has(w.id)}
-                  electric={topology.electricWires.has(w.id)}
+                  domain={topology.wireDomain.get(w.id) ?? "pneumatic"}
                   state={snapshot?.wires[w.id]}
                   onPointerDown={onWirePointerDown}
                 />

@@ -16,6 +16,7 @@ import { num } from "../core/element";
 import type { Actuator, ComponentSimState, RuntimeWarning, SimSpec } from "../core/sim-types";
 import type { Branch } from "../solver/network";
 import { Base, clamp01, PILOT_MIN } from "./base";
+import { oilFlow } from "../hydraulic/flow";
 import { BAR, conductanceFromNominal, orificeFlow, P_ATM } from "./flow";
 
 type ValveSpec = Extract<SimSpec, { kind: "valve" }>;
@@ -51,9 +52,10 @@ export class DirectionalValve extends Base {
     this.manual[side] = active;
   }
 
-  /** Pressão de comutação dos pilotos: ajustável na válvula de sequência, 1,5 bar nas demais. */
+  /** Pressão de comutação dos pilotos: ajustável na válvula de sequência; 1,5 bar no ar, 5 bar no óleo. */
   private get pilotThreshold() {
-    return typeof this.params.switchPressure === "number" ? this.params.switchPressure * BAR : PILOT_MIN;
+    if (typeof this.params.switchPressure === "number") return this.params.switchPressure * BAR;
+    return this.spec.domain === "hydraulic" ? 5 * BAR : PILOT_MIN;
   }
 
   private nearCylinder(rt: Runtime, tolerance: number, direction?: "advance" | "return"): boolean {
@@ -118,11 +120,15 @@ export class DirectionalValve extends Base {
   }
 
   branches(out: Branch[]) {
-    const c = conductanceFromNominal(num(this.params.nominalFlow, 500));
+    const hydraulic = this.spec.domain === "hydraulic";
+    const qn = num(this.params.nominalFlow, hydraulic ? 30 : 500);
+    const c = conductanceFromNominal(qn);
     this.spec.squares.forEach((sq, i) => {
       const w = clamp01(1 - 2 * Math.abs(this.spool - i));
       if (w <= 0) return;
-      for (const [from, to] of sq.flows) out.push(this.between(from, to, (pa, pb) => orificeFlow(c * w, pa, pb)));
+      for (const [from, to] of sq.flows) {
+        out.push(this.between(from, to, hydraulic ? (pa, pb) => oilFlow(qn * w, pa, pb) : (pa, pb) => orificeFlow(c * w, pa, pb)));
+      }
     });
   }
 

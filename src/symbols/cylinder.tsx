@@ -69,6 +69,8 @@ export function makeCylinderDef(spec: CylinderSpec): ComponentDef {
   ];
   if (spec.singleActing) params.push({ key: "springForce", type: "number", unit: "N", default: 30, min: 0, max: 5000 });
   if (variant === "cushioned") params.push({ key: "cushioning", type: "number", unit: "%", default: 50, min: 0, max: 100 });
+  // No óleo a massa da carga importa mais (forças grandes, peças pesadas).
+  if (spec.domain === "hydraulic") params.push({ key: "mass", type: "number", unit: "kg", default: 20, min: 0.1, max: 100000 });
 
   function CylinderSymbol({ state }: SymbolProps) {
     const extension = state?.extension ?? 0;
@@ -128,15 +130,12 @@ export function makeCylinderDef(spec: CylinderSpec): ComponentDef {
     ports: spec.singleActing ? [portA] : [portA, portB],
     params,
     keywords: spec.keywords,
-    sim:
-      spec.domain === "pneumatic"
-        ? {
-            kind: "cylinder",
-            singleActing: spec.singleActing,
-            throughRod: variant === "through-rod",
-            cushioned: variant === "cushioned",
-          }
-        : undefined,
+    sim: {
+      kind: "cylinder",
+      singleActing: spec.singleActing,
+      throughRod: variant === "through-rod",
+      cushioned: variant === "cushioned",
+    },
     Symbol: CylinderSymbol,
   };
 }

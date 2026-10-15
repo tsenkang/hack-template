@@ -1,0 +1,370 @@
+{
+  "format": "fluxolab",
+  "version": 1,
+  "savedAt": "2026-01-01T00:00:00.000Z",
+  "project": {
+    "id": "p_hyd",
+    "name": "Eletro-hidráulica 4/3 tandem",
+    "circuits": [
+      {
+        "id": "c1",
+        "name": "Circuito 1",
+        "components": [
+          {
+            "id": "k0",
+            "type": "hyd.cylinder.double-acting",
+            "x": 40,
+            "y": 0,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "A1",
+            "params": {
+              "pistonDiameter": 40,
+              "rodDiameter": 22,
+              "stroke": 200,
+              "load": 0,
+              "maxPressure": 210,
+              "mass": 20
+            }
+          },
+          {
+            "id": "k1",
+            "type": "hyd.valve.4-3-tandem.solenoid",
+            "x": 20,
+            "y": 140,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "V1",
+            "params": {
+              "switchTime": 20,
+              "nominalFlow": 30,
+              "solenoidLeft": "Y1",
+              "solenoidRight": "Y2"
+            }
+          },
+          {
+            "id": "k2",
+            "type": "hyd.pump.fixed",
+            "x": 0,
+            "y": 300,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "P1",
+            "params": {
+              "displacement": 8,
+              "speed": 1450,
+              "maxPressure": 250
+            }
+          },
+          {
+            "id": "k3",
+            "type": "hyd.valve.relief",
+            "x": 140,
+            "y": 290,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "V2",
+            "params": {
+              "setPressure": 100,
+              "nominalFlow": 60
+            }
+          },
+          {
+            "id": "k4",
+            "type": "hyd.gauge.pressure",
+            "x": 260,
+            "y": 250,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "M1",
+            "params": {
+              "range": 250
+            }
+          },
+          {
+            "id": "k5",
+            "type": "hyd.tank",
+            "x": 30,
+            "y": 420,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k6",
+            "type": "hyd.tank",
+            "x": 150,
+            "y": 420,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k7",
+            "type": "hyd.tank",
+            "x": 240,
+            "y": 300,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k8",
+            "type": "elec.supply.24v",
+            "x": 420,
+            "y": 0,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k9",
+            "type": "elec.pushbutton.no",
+            "x": 420,
+            "y": 80,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "S1",
+            "params": {}
+          },
+          {
+            "id": "k10",
+            "type": "elec.solenoid.coil",
+            "x": 420,
+            "y": 180,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "Y1",
+            "params": {}
+          },
+          {
+            "id": "k11",
+            "type": "elec.supply.0v",
+            "x": 420,
+            "y": 270,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k12",
+            "type": "elec.supply.24v",
+            "x": 520,
+            "y": 0,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          },
+          {
+            "id": "k13",
+            "type": "elec.pushbutton.no",
+            "x": 520,
+            "y": 80,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "S2",
+            "params": {}
+          },
+          {
+            "id": "k14",
+            "type": "elec.solenoid.coil",
+            "x": 520,
+            "y": 180,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "Y2",
+            "params": {}
+          },
+          {
+            "id": "k15",
+            "type": "elec.supply.0v",
+            "x": 520,
+            "y": 270,
+            "rotation": 0,
+            "mirrored": false,
+            "label": "",
+            "params": {}
+          }
+        ],
+        "connections": [
+          {
+            "id": "w0",
+            "from": {
+              "componentId": "k5",
+              "portId": "T"
+            },
+            "to": {
+              "componentId": "k2",
+              "portId": "S"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w1",
+            "from": {
+              "componentId": "k2",
+              "portId": "P"
+            },
+            "to": {
+              "componentId": "k1",
+              "portId": "P"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w2",
+            "from": {
+              "componentId": "k2",
+              "portId": "P"
+            },
+            "to": {
+              "componentId": "k3",
+              "portId": "P"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w3",
+            "from": {
+              "componentId": "k3",
+              "portId": "T"
+            },
+            "to": {
+              "componentId": "k6",
+              "portId": "T"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w4",
+            "from": {
+              "componentId": "k1",
+              "portId": "T"
+            },
+            "to": {
+              "componentId": "k7",
+              "portId": "T"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w5",
+            "from": {
+              "componentId": "k1",
+              "portId": "A"
+            },
+            "to": {
+              "componentId": "k0",
+              "portId": "A"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w6",
+            "from": {
+              "componentId": "k1",
+              "portId": "B"
+            },
+            "to": {
+              "componentId": "k0",
+              "portId": "B"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w7",
+            "from": {
+              "componentId": "k2",
+              "portId": "P"
+            },
+            "to": {
+              "componentId": "k4",
+              "portId": "1"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w8",
+            "from": {
+              "componentId": "k8",
+              "portId": "+"
+            },
+            "to": {
+              "componentId": "k9",
+              "portId": "1"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w9",
+            "from": {
+              "componentId": "k9",
+              "portId": "2"
+            },
+            "to": {
+              "componentId": "k10",
+              "portId": "A1"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w10",
+            "from": {
+              "componentId": "k10",
+              "portId": "A2"
+            },
+            "to": {
+              "componentId": "k11",
+              "portId": "0"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w11",
+            "from": {
+              "componentId": "k12",
+              "portId": "+"
+            },
+            "to": {
+              "componentId": "k13",
+              "portId": "1"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w12",
+            "from": {
+              "componentId": "k13",
+              "portId": "2"
+            },
+            "to": {
+              "componentId": "k14",
+              "portId": "A1"
+            },
+            "waypoints": []
+          },
+          {
+            "id": "w13",
+            "from": {
+              "componentId": "k14",
+              "portId": "A2"
+            },
+            "to": {
+              "componentId": "k15",
+              "portId": "0"
+            },
+            "waypoints": []
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+}

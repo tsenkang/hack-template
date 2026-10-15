@@ -10,7 +10,8 @@ export const tank: ComponentDef = {
   height: 30,
   ports: [{ id: "T", x: 20, y: 0, kind: "hydraulic" }],
   params: [{ key: "volume", type: "number", unit: "l", default: 40, min: 1, max: 2000 }],
-  keywords: ["reservatório", "retorno", "óleo"],
+  keywords: ["reservatório", "retorno", "óleo", "tanque"],
+  sim: { kind: "hyd-tank" },
   Symbol: () => (
     <g>
       <path className="sym" d="M4 10 V26 H36 V10" />

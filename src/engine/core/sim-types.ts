@@ -49,6 +49,7 @@ export type SimSpec =
   | { kind: "check-valve" }
   | { kind: "flow-control-one-way" }
   | { kind: "cylinder"; singleActing: boolean; throughRod?: boolean; cushioned?: boolean }
+  | HydraulicSpec
   | ElectricSpec
   | {
       kind: "valve";
@@ -59,7 +60,28 @@ export type SimSpec =
       pilotIds?: { left?: string; right?: string };
       /** Válvula de 3 posições centrada por molas nos dois lados. */
       springCentered?: boolean;
+      /** Ar (padrão) ou óleo: muda a lei de vazão e a pressão de pilotagem. */
+      domain?: FluidDomain;
     };
+
+/** Peças hidráulicas próprias (cilindros, válvulas direcionais, manômetro e T são compartilhados). */
+export type HydraulicSpec =
+  | { kind: "hyd-pump"; variable: boolean }
+  | { kind: "hyd-tank" }
+  /** Filtro, resfriador, aquecedor: uma pequena perda de carga entre 1 e 2. */
+  | { kind: "hyd-passthrough" }
+  | { kind: "flow-meter" }
+  | { kind: "accumulator" }
+  | { kind: "hyd-motor" }
+  | { kind: "hyd-relief" }
+  | { kind: "hyd-reducing" }
+  | { kind: "hyd-sequence" }
+  | { kind: "hyd-counterbalance" }
+  | { kind: "hyd-throttle"; mode: "fixed" | "adjustable" | "one-way" }
+  | { kind: "hyd-flow-compensated" }
+  | { kind: "hyd-check" }
+  | { kind: "hyd-pilot-check" }
+  | { kind: "proportional-valve"; servo: boolean };
 
 /** Como um contato elétrico é acionado. */
 export type ContactDrive =
@@ -117,6 +139,9 @@ export interface SimPort {
   exhaust: boolean;
 }
 
+/** Domínio de uma rede ou linha. */
+export type FluidDomain = "pneumatic" | "hydraulic";
+
 export interface SimComponent {
   id: string;
   label: string;
@@ -124,6 +149,8 @@ export interface SimComponent {
   params: Record<string, ParamValue>;
   /** Conectores pneumáticos (redes de ar). */
   ports: SimPort[];
+  /** Conectores hidráulicos (redes de óleo). */
+  hydPorts: SimPort[];
   /** Conectores elétricos (redes elétricas). */
   elecPorts: string[];
 }
@@ -139,9 +166,11 @@ export interface SimCircuit {
   components: SimComponent[];
   /** Redes de ar. */
   nets: SimNet[];
+  /** Redes de óleo. */
+  hydNets: SimNet[];
   /** Redes elétricas (fios ligados entre si). */
   elecNets: SimNet[];
-  wires: { id: string; from: string; to: string; electric: boolean }[];
+  wires: { id: string; from: string; to: string; domain: FluidDomain | "electric" }[];
 }
 
 /** Estado visível de uma peça a cada quadro. */
@@ -175,6 +204,8 @@ export interface ComponentSimState {
   position?: number;
   /** Fusível queimado / disjuntor desarmado. */
   blown?: boolean;
+  /** Vazão medida [l/min] (medidor de vazão). */
+  flow?: number;
 }
 
 /** Problema detectado durante a simulação. */

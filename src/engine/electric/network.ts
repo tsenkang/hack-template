@@ -489,7 +489,7 @@ export class ElectricNetwork {
   wireStates(): Record<string, { p: number; q: number }> {
     const out: Record<string, { p: number; q: number }> = {};
     for (const w of this.circuit.wires) {
-      if (!w.electric) continue;
+      if (w.domain !== "electric") continue;
       const net = this.netOf.get(w.from);
       const q = ((this.portCurrent.get(w.from) ?? 0) - (this.portCurrent.get(w.to) ?? 0)) / 2;
       out[w.id] = { p: net === undefined ? 0 : this.v[net], q: q * 1000 };

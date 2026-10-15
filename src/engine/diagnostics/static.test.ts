@@ -63,4 +63,22 @@ describe("detector de erros (estático)", () => {
     const list = codes(c);
     expect(list.filter((k) => k.includes("solenoid"))).toEqual([]);
   });
+
+  it("hidráulica: sem bomba, bomba sem tanque e conector de óleo tampado", () => {
+    const c = new TestCircuit();
+    c.add("hyd.cylinder.double-acting");
+    expect(codes(c)).toContain("no-hyd-supply:");
+    expect(codes(c)).not.toContain("no-supply:"); // não é pneumático
+    c.add("hyd.pump.fixed");
+    const list = codes(c);
+    expect(list).toContain("pump-no-tank:S");
+    expect(list).toContain("open-port-oil:A");
+  });
+
+  it("projeto só elétrico não pede fonte de ar", () => {
+    const c = new TestCircuit();
+    c.add("elec.supply.24v");
+    c.add("elec.lamp");
+    expect(codes(c)).not.toContain("no-supply:");
+  });
 });

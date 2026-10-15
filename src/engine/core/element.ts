@@ -43,8 +43,10 @@ export interface Element {
 
 /** Peça com parte móvel que muda o volume das redes (cilindros). */
 export interface MechanicalElement extends Element {
-  /** Volume [m³] que a peça soma em cada rede, na posição atual. */
-  chambers(): { net: number; volume: number }[];
+  /** Volume [m³] que a peça soma em cada rede, na posição atual, e a área do êmbolo [m²]. */
+  chambers(): { net: number; volume: number; area: number }[];
+  /** Massa em movimento [kg] (para escolher quantos subpassos a mecânica precisa). */
+  readonly mass: number;
   /** Integra o movimento por `h` segundos com as pressões atuais. */
   integrate(h: number, p: Float64Array): void;
   readonly label: string;

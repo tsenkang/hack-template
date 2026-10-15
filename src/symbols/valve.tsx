@@ -191,11 +191,12 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
     // Na pneumática, 3 e 5 são escapes: podem ficar soltos (o ar sai pela própria válvula).
     exhaust: spec.domain === "pneumatic" && (p.id === "3" || p.id === "5"),
   }));
+  const pilotKind = spec.domain === "hydraulic" ? "hydraulic-pilot" : "pilot";
   if (spec.left === "pilot" && spec.pilotIds?.left) {
-    ports.push({ id: spec.pilotIds.left, x: 0, y: CY, kind: "pilot" });
+    ports.push({ id: spec.pilotIds.left, x: 0, y: CY, kind: pilotKind });
   }
   if (spec.right === "pilot" && spec.pilotIds?.right) {
-    ports.push({ id: spec.pilotIds.right, x: width, y: CY, kind: "pilot" });
+    ports.push({ id: spec.pilotIds.right, x: width, y: CY, kind: pilotKind });
   }
 
   /** Ponto de uma via dentro do quadrado `sx` (ligeiramente para dentro da borda). */
@@ -237,14 +238,14 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
           <g transform={`translate(${act} ${CY})`}>
             <SideActuator spec={spec} side="left" reach={act} />
           </g>
-          {/* rótulo do solenoide (Y1…) acima da bobina */}
+          {/* rótulo do solenoide (Y1…) logo abaixo da bobina */}
           {spec.left === "solenoid" && (
-            <text className="sym-text" x={act - 11} y={TOP - 1} fontSize={8} textAnchor="middle">
+            <text className="sym-text" x={act - 11} y={CY + 17} fontSize={8} textAnchor="middle">
               {String(params.solenoidLeft ?? "")}
             </text>
           )}
           {spec.right === "solenoid" && (
-            <text className="sym-text" x={act + n * VALVE_SQUARE + 11} y={TOP - 1} fontSize={8} textAnchor="middle">
+            <text className="sym-text" x={act + n * VALVE_SQUARE + 11} y={CY + 17} fontSize={8} textAnchor="middle">
               {String(params.solenoidRight ?? "")}
             </text>
           )}
@@ -263,7 +264,10 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
   ValveSymbol.displayName = `Valve(${spec.type})`;
 
   const sides = [spec.left, spec.right];
-  const params = [...VALVE_PARAMS];
+  const params: ParamDef[] =
+    spec.domain === "hydraulic"
+      ? [VALVE_PARAMS[0], { key: "nominalFlow", type: "number", unit: "l/min", default: 30, min: 1, max: 1000 }]
+      : [...VALVE_PARAMS];
   // Solenoides: rótulo que liga a válvula à bobina do circuito elétrico (Y1, Y2…).
   if (spec.left === "solenoid") params.push({ key: "solenoidLeft", type: "text", default: "Y1", autoLabel: "Y" });
   if (spec.right === "solenoid") params.push({ key: "solenoidRight", type: "text", default: "Y2", autoLabel: "Y" });
@@ -290,6 +294,7 @@ export function makeValveDef(spec: ValveSpec): ComponentDef {
       right: spec.right,
       pilotIds: spec.pilotIds,
       springCentered: spec.springCentered,
+      domain: spec.domain,
     },
     Symbol: ValveSymbol,
   };

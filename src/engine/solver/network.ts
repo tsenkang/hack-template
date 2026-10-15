@@ -1,15 +1,15 @@
 /**
- * Solver da rede de ar: análise nodal com integração implícita (Euler para trás)
- * e Newton-Raphson.
+ * Solver de redes de fluido (ar ou óleo): análise nodal com integração implícita
+ * (Euler para trás) e Newton-Raphson.
  *
- * Cada rede (conjunto de conectores ligados) é um nó com volume V e pressão p.
- * Cada orifício é um ramo com vazão mássica m(pa, pb). Para cada nó:
+ * Cada rede (conjunto de conectores ligados) é um nó com capacidade C e pressão p.
+ * Cada orifício é um ramo com vazão q(pa, pb). Para cada nó:
  *
- *     V/(R·T) · (p − p_anterior)/dt = Σ vazões que entram
+ *     C · (p − p_anterior)/dt = Σ vazões que entram
  *
- * Os nós 0..n−1 são incógnitas; os nós ≥ n têm pressão fixa (atmosfera, fontes).
+ * Ar: C = V/(R·T) e q em kg/s. Óleo: C = V/β e q em m³/s.
+ * Os nós 0..n−1 são incógnitas; os nós ≥ n têm pressão fixa (atmosfera, tanque, fontes).
  */
-import { RT } from "../pneumatic/flow";
 import { solveDense } from "./dense";
 
 export interface Branch {
@@ -26,7 +26,6 @@ const MAX_ITER = 10;
 const TOL_PA = 0.5;
 /** Maior variação de pressão aceita por iteração (evita "pulos" do Newton). */
 const MAX_DELTA = 3e5;
-const MIN_PRESSURE = 1e3;
 
 export interface NetworkWork {
   J: Float64Array;
@@ -55,13 +54,13 @@ const deriv = (f: (x: number) => number, x: number) => {
 function residual(
   p: Float64Array,
   prev: Float64Array,
-  volumes: Float64Array,
+  capacity: Float64Array,
   n: number,
   branches: readonly Branch[],
   dt: number,
   F: Float64Array,
 ): number {
-  for (let i = 0; i < n; i++) F[i] = (volumes[i] / (RT * dt)) * (p[i] - prev[i]);
+  for (let i = 0; i < n; i++) F[i] = (capacity[i] / dt) * (p[i] - prev[i]);
   for (const br of branches) {
     const m = br.flow(p[br.a], p[br.b]);
     if (br.a < n) F[br.a] += m;
@@ -82,21 +81,25 @@ function residual(
  */
 export function stepNetwork(
   p: Float64Array,
-  volumes: Float64Array,
+  capacity: Float64Array,
   n: number,
   branches: readonly Branch[],
   dt: number,
   work: NetworkWork,
+  /** Menor pressão absoluta aceita [Pa] (evita pressões negativas). */
+  minPressure = 1e3,
+  /** Maior variação de pressão por iteração [Pa]. */
+  maxDelta = MAX_DELTA,
 ): Float64Array {
   const { J, F, prev, trialF } = work;
   if (work.trial.length !== p.length) work.trial = new Float64Array(p.length);
   const trial = work.trial;
   for (let i = 0; i < n; i++) prev[i] = p[i];
 
-  let norm = residual(p, prev, volumes, n, branches, dt, F);
+  let norm = residual(p, prev, capacity, n, branches, dt, F);
   for (let iter = 0; iter < MAX_ITER && n > 0; iter++) {
     J.fill(0);
-    for (let i = 0; i < n; i++) J[i * n + i] = volumes[i] / (RT * dt);
+    for (let i = 0; i < n; i++) J[i * n + i] = capacity[i] / dt;
     for (const br of branches) {
       const pa = p[br.a];
       const pb = p[br.b];
@@ -115,21 +118,21 @@ export function stepNetwork(
     for (let i = 0; i < n; i++) F[i] = -F[i];
     if (!solveDense(J, F, n)) break;
 
-    let maxDelta = 0;
-    for (let i = 0; i < n; i++) maxDelta = Math.max(maxDelta, Math.abs(F[i]));
-    let alpha = maxDelta > MAX_DELTA ? MAX_DELTA / maxDelta : 1;
+    let maxDeltaSeen = 0;
+    for (let i = 0; i < n; i++) maxDeltaSeen = Math.max(maxDeltaSeen, Math.abs(F[i]));
+    let alpha = maxDeltaSeen > maxDelta ? maxDelta / maxDeltaSeen : 1;
     trial.set(p);
     let trialNorm = Infinity;
     for (let tries = 0; tries < 12; tries++) {
-      for (let i = 0; i < n; i++) trial[i] = Math.max(MIN_PRESSURE, p[i] + F[i] * alpha);
-      trialNorm = residual(trial, prev, volumes, n, branches, dt, trialF);
-      if (trialNorm < norm || alpha * maxDelta < TOL_PA) break;
+      for (let i = 0; i < n; i++) trial[i] = Math.max(minPressure, p[i] + F[i] * alpha);
+      trialNorm = residual(trial, prev, capacity, n, branches, dt, trialF);
+      if (trialNorm < norm || alpha * maxDeltaSeen < TOL_PA) break;
       alpha /= 2;
     }
     for (let i = 0; i < n; i++) p[i] = trial[i];
     F.set(trialF);
     norm = trialNorm;
-    if (alpha * maxDelta < TOL_PA) break;
+    if (alpha * maxDeltaSeen < TOL_PA) break;
   }
 
   const flows = new Float64Array(branches.length);

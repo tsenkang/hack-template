@@ -19,10 +19,10 @@ describe("montagem das redes", () => {
     expect(netOf(`${t}:3`)).toBe(netOf(`${g2}:1`)); // conector solto do T também é o mesmo ponto
   });
 
-  it("ignora peças que ainda não têm simulação (hidráulicas)", () => {
+  it("ignora peças sem simulação (ex.: termômetro, que só mostra a temperatura)", () => {
     const c = new TestCircuit();
     c.add("elec.lamp");
-    c.add("hyd.tank");
+    c.add("hyd.thermometer");
     c.add("pneu.silencer");
     expect(compileProject(c.project, lookupPart).components).toHaveLength(2);
   });
@@ -34,7 +34,7 @@ describe("montagem das redes", () => {
     c.wire(plus, "+", lamp, "X1");
     const sim = compileProject(c.project, lookupPart);
     expect(sim.elecNets.some((n) => n.ports.includes(`${plus}:+`) && n.ports.includes(`${lamp}:X1`))).toBe(true);
-    expect(sim.wires[0].electric).toBe(true);
+    expect(sim.wires[0].domain).toBe("electric");
     expect(sim.nets).toHaveLength(0);
   });
 });
