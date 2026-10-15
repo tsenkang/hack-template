@@ -80,6 +80,19 @@ export const valve32ncLever = makeValveDef({
   keywords: ["alavanca", "manual"],
 });
 
+/** 3/2 NF com alavanca e trava (chave seletora pneumática): liga e fica ligada até outro clique. */
+export const valve32ncLeverDetent = makeValveDef({
+  type: "pneu.valve.3-2-nc.lever-detent",
+  domain: "pneumatic",
+  category: "pneu-directional",
+  ports: PORTS_3_2,
+  squares: SQUARES_3_2_NC,
+  restIndex: 1,
+  left: "lever-detent",
+  right: "detent",
+  keywords: ["alavanca", "trava", "seletora", "liga desliga", "ciclo contínuo"],
+});
+
 export const valve32ncPilot = makeValveDef({
   type: "pneu.valve.3-2-nc.pilot-spring",
   domain: "pneumatic",

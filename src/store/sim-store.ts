@@ -19,32 +19,76 @@ export type SimStatus = "stopped" | "running" | "paused";
  */
 export interface MotionHistory {
   t: number[];
+  /** Avanço (0…1) de cada cilindro, pelo id da peça. */
   series: Record<string, number[]>;
+  /** Grandezas para os gráficos, chave "id:campo" (ex.: "k12:pressure"). */
+  measures: Record<string, number[]>;
 }
-export const motionHistory: MotionHistory = { t: [], series: {} };
+export const motionHistory: MotionHistory = { t: [], series: {}, measures: {} };
+/** Campos numéricos das peças que viram gráfico. */
+export const MEASURE_FIELDS = ["extension", "velocity", "pressure", "flow", "rpm"] as const;
+export type MeasureField = (typeof MEASURE_FIELDS)[number];
 /** Intervalo mínimo entre amostras [s de simulação] e tamanho máximo do histórico. */
 const SAMPLE_DT = 0.01;
 const HISTORY_MAX = 6000;
+
+function push(map: Record<string, number[]>, key: string, length: number, value: number) {
+  (map[key] ??= new Array(length).fill(value)).push(value);
+}
 
 function recordHistory(snap: SimSnapshot) {
   const h = motionHistory;
   const last = h.t[h.t.length - 1];
   if (last !== undefined && snap.time - last < SAMPLE_DT) return false;
+  const n = h.t.length;
   h.t.push(snap.time);
   for (const [id, st] of Object.entries(snap.components)) {
-    if (st.extension === undefined) continue;
-    (h.series[id] ??= new Array(h.t.length - 1).fill(st.extension)).push(st.extension);
+    if (st.extension !== undefined) push(h.series, id, n, st.extension);
+    for (const f of MEASURE_FIELDS) {
+      const v = st[f];
+      if (typeof v === "number") push(h.measures, `${id}:${f}`, n, v);
+    }
   }
   if (h.t.length > HISTORY_MAX) {
-    h.t.splice(0, h.t.length - HISTORY_MAX);
+    const cut = h.t.length - HISTORY_MAX;
+    h.t.splice(0, cut);
     for (const s of Object.values(h.series)) s.splice(0, s.length - HISTORY_MAX);
+    for (const s of Object.values(h.measures)) s.splice(0, s.length - HISTORY_MAX);
   }
   return true;
 }
 
+/** Acionamentos feitos durante a simulação (para o professor gravar o roteiro de um exercício). */
+export interface LoggedAction {
+  t: number;
+  id: string;
+  side: "left" | "right";
+  active: boolean;
+}
+export const actionLog: LoggedAction[] = [];
+
+/** Ordem dos movimentos dos cilindros no histórico ("A1+", "A1-"…), como no roteiro automático. */
+export function sequenceFromHistory(labels: Map<string, string>): string[] {
+  const events: { t: number; name: string }[] = [];
+  for (const [id, values] of Object.entries(motionHistory.series)) {
+    const label = labels.get(id);
+    if (!label) continue;
+    let prev = values[0] ?? 0;
+    for (let i = 1; i < values.length; i++) {
+      const e = values[i];
+      if (e >= 0.99 && prev < 0.99) events.push({ t: motionHistory.t[i], name: `${label}+` });
+      if (e <= 0.01 && prev > 0.01) events.push({ t: motionHistory.t[i], name: `${label}-` });
+      prev = e;
+    }
+  }
+  return events.sort((a, b) => a.t - b.t).map((e) => e.name);
+}
+
 function clearHistory() {
+  actionLog.length = 0;
   motionHistory.t = [];
   motionHistory.series = {};
+  motionHistory.measures = {};
 }
 
 /** Quanto o botão "avançar um passo" anda no tempo [s]. */
@@ -187,6 +231,7 @@ export const useSim = create<SimState>()((set, get) => {
       set({ speed });
     },
     actuate(id, side, active) {
+      actionLog.push({ t: get().snapshot?.time ?? 0, id, side, active });
       const cmd: SimCommand = { type: "actuate", id, side, active };
       send({ type: "command", cmd });
     },

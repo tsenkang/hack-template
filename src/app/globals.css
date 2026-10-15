@@ -377,3 +377,47 @@ body {
     animation: none !important;
   }
 }
+
+/* ---------- Ladder e GRAFCET ---------- */
+.ladder-rail {
+  stroke: var(--sym-stroke);
+  stroke-width: 3;
+}
+.ladder-wire {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+}
+.ladder-on {
+  stroke: var(--wire-current);
+  stroke-width: 2.5;
+}
+.ladder-coil-on {
+  fill: var(--elec-energized);
+  fill-opacity: 0.6;
+}
+.ladder-text {
+  fill: var(--sym-stroke);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+.ladder-error {
+  fill: var(--danger);
+}
+.grafcet-step {
+  fill: var(--sym-bg);
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+}
+.grafcet-step-active {
+  fill: var(--elec-energized);
+}
+
+/* Cores das séries dos gráficos (distintas também em tons de cinza: cada faixa é separada). */
+.chart-series-0 { stroke: var(--accent); }
+.chart-series-1 { stroke: #c2410c; }
+.chart-series-2 { stroke: #0f766e; }
+.chart-series-3 { stroke: #7c3aed; }
+.dark .chart-series-1 { stroke: #fb923c; }
+.dark .chart-series-2 { stroke: #2dd4bf; }
+.dark .chart-series-3 { stroke: #a78bfa; }

@@ -2,6 +2,7 @@
  * Tipos trocados entre a tela e o motor de simulação (que roda no Web Worker).
  * Tudo aqui é dado puro (serializável), sem funções nem React.
  */
+import type { PlcState } from "../logic/plc";
 import type { ParamValue } from "./types";
 
 /** Acionamento de um lado da válvula direcional. */
@@ -121,7 +122,9 @@ export type ElectricSpec =
     }
   /** Fusível (queima e fica aberto) ou disjuntor (desarma; clique rearma ou desliga). */
   | { kind: "elec-fuse"; breaker: boolean }
-  | { kind: "elec-diode" };
+  | { kind: "elec-diode" }
+  /** CLP: alimentação L+/M, entradas I0…I7 e saídas Q0…Q7 (programa ladder/GRAFCET no parâmetro `program`). */
+  | { kind: "elec-plc" };
 
 export const isElectric = (spec: SimSpec): spec is ElectricSpec => spec.kind.startsWith("elec-");
 
@@ -206,6 +209,8 @@ export interface ComponentSimState {
   blown?: boolean;
   /** Vazão medida [l/min] (medidor de vazão). */
   flow?: number;
+  /** Entradas, saídas e etapas ativas do CLP. */
+  plc?: PlcState;
 }
 
 /** Problema detectado durante a simulação. */

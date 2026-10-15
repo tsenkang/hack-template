@@ -16,6 +16,7 @@ import { num } from "../core/element";
 import type { ComponentSimState, ElectricSpec, RuntimeWarning, SimCircuit, SimComponent } from "../core/sim-types";
 import { isElectric, portKey } from "../core/sim-types";
 import type { ParamValue } from "../core/types";
+import { PLC_INPUTS, PLC_OUTPUTS, PlcRuntime, parseProgram, type PlcState } from "../logic/plc";
 import { BAR, P_ATM } from "../pneumatic/flow";
 import { solveDense } from "../solver/dense";
 
@@ -31,6 +32,10 @@ const PICKUP = 0.7;
 const OVERVOLTAGE = 1.3;
 /** Histerese do pressostato [Pa]. */
 const PRESSURE_HYSTERESIS = 0.2 * BAR;
+/** CLP: resistência de cada entrada (≈5 mA em 24 V), consumo próprio e tensão mínima para "1" (IEC 61131-2, tipo 1). */
+const PLC_INPUT_R = 4800;
+const PLC_SELF_R = (24 * 24) / 5;
+const PLC_INPUT_ON = 15;
 
 /** Potência nominal [W] de cada tipo de carga (para calcular a resistência). */
 const LOAD_POWER: Record<string, number> = {
@@ -64,6 +69,10 @@ interface Part {
   pressureOn: boolean;
   energized: boolean;
   voltage: number;
+  /** CLP: programa em execução, saídas atuais e estado para a tela. */
+  plc?: PlcRuntime;
+  plcOut: boolean[];
+  plcState?: PlcState;
 }
 
 /** Bobina com rótulo: relé, contator, temporizador ou contador. */
@@ -83,7 +92,9 @@ interface Conductor {
   partIndex: number;
   /** Para chaves de dois contatos (reversora, seletora) e fusíveis. */
   ports: [string, string];
-  kind: "contact" | "fuse" | "diode";
+  kind: "contact" | "fuse" | "diode" | "plc-out";
+  /** Saída do CLP ligada a este condutor. */
+  output?: number;
 }
 
 interface Load {
@@ -93,6 +104,8 @@ interface Load {
   r: number;
   nominal: number;
   ports: [string, string];
+  /** Entrada do CLP (0…7) ou −1 para o consumo próprio do CLP. */
+  plcInput?: number;
 }
 
 export class ElectricNetwork {
@@ -142,6 +155,8 @@ export class ElectricNetwork {
         pressureOn: false,
         energized: false,
         voltage: 0,
+        plcOut: new Array<boolean>(PLC_OUTPUTS).fill(false),
+        plc: comp.spec.kind === "elec-plc" ? new PlcRuntime(parseProgram(comp.params.program)) : undefined,
       });
       if (comp.spec.kind === "elec-load" && comp.label) this.coil(comp.label);
     }
@@ -196,6 +211,15 @@ export class ElectricNetwork {
         this.conductors.push({ a: this.net(comp, "1"), b: this.net(comp, "2"), partIndex: i, ports: pair("1", "2"), kind: "fuse" });
       } else if (spec.kind === "elec-diode") {
         this.conductors.push({ a: this.net(comp, "A"), b: this.net(comp, "K"), partIndex: i, ports: pair("A", "K"), kind: "diode" });
+      } else if (spec.kind === "elec-plc") {
+        const m = this.net(comp, "M");
+        this.loads.push({ a: this.net(comp, "L+"), b: m, partIndex: i, r: PLC_SELF_R, nominal: 24, ports: pair("L+", "M"), plcInput: -1 });
+        for (let k = 0; k < PLC_INPUTS; k++) {
+          this.loads.push({ a: this.net(comp, `I${k}`), b: m, partIndex: i, r: PLC_INPUT_R, nominal: 24, ports: pair(`I${k}`, "M"), plcInput: k });
+        }
+        for (let k = 0; k < PLC_OUTPUTS; k++) {
+          this.conductors.push({ a: this.net(comp, "L+"), b: this.net(comp, `Q${k}`), partIndex: i, ports: pair("L+", `Q${k}`), kind: "plc-out", output: k });
+        }
       } else if (spec.kind === "elec-load") {
         const [x, y] = comp.elecPorts;
         const nominal = num(p.params.voltage, 24);
@@ -244,6 +268,7 @@ export class ElectricNetwork {
       const p = this.parts[c.partIndex];
       if (c.kind === "fuse") return !p.blown && p.on;
       if (c.kind === "diode") return this.diodeOn[k];
+      if (c.kind === "plc-out") return p.plcOut[c.output!];
       if (p.spec.kind === "elec-selector3") {
         return c.ports[1].endsWith(":2") ? p.position === -1 : p.position === 1;
       }
@@ -343,8 +368,21 @@ export class ElectricNetwork {
       coil.energizedNow = false;
     }
     const resetLabels = new Set<string>();
+    const plcInputs = new Map<number, boolean[]>();
     for (const l of this.loads) {
       const p = this.parts[l.partIndex];
+      if (l.plcInput !== undefined) {
+        const v = this.voltage(l.a) - this.voltage(l.b);
+        if (l.plcInput < 0) {
+          p.voltage = v;
+          p.energized = !this.short && v >= PICKUP * l.nominal;
+        } else {
+          const ins = plcInputs.get(l.partIndex) ?? new Array<boolean>(PLC_INPUTS).fill(false);
+          ins[l.plcInput] = !this.short && v >= PLC_INPUT_ON;
+          plcInputs.set(l.partIndex, ins);
+        }
+        continue;
+      }
       p.voltage = this.voltage(l.a) - this.voltage(l.b);
       p.energized = !this.short && Math.abs(p.voltage) >= PICKUP * l.nominal;
       const load = (p.spec as LoadSpec).load;
@@ -384,6 +422,17 @@ export class ElectricNetwork {
           break;
       }
     }
+    // CLP: um ciclo de varredura por passo; as saídas valem a partir do próximo passo.
+    this.parts.forEach((p, i) => {
+      if (!p.plc) return;
+      if (p.energized) {
+        p.plcOut = p.plc.scan(plcInputs.get(i) ?? [], dt);
+        p.plcState = p.plc.state();
+      } else {
+        p.plcOut.fill(false);
+        p.plcState = undefined;
+      }
+    });
     this.computePortCurrents();
     for (const p of this.parts) {
       if (p.releasePending) {
@@ -461,6 +510,7 @@ export class ElectricNetwork {
     p.params = { ...p.params, [key]: value };
     if (p.spec.kind === "elec-supply") this.applySupplies();
     if (p.spec.kind === "elec-load") this.buildElements();
+    if (p.spec.kind === "elec-plc" && key === "program") p.plc = new PlcRuntime(parseProgram(value));
     this.signature = null; // força recalcular a rede no próximo passo
   }
 
@@ -473,6 +523,7 @@ export class ElectricNetwork {
         out[comp.id] = { closed: this.closed[first] ?? false, pressed: { left: p.pressed || p.latched, right: false } };
       } else if (spec.kind === "elec-selector3") out[comp.id] = { position: p.position };
       else if (spec.kind === "elec-fuse") out[comp.id] = { blown: p.blown || !p.on, closed: !p.blown && p.on };
+      else if (spec.kind === "elec-plc") out[comp.id] = { energized: p.energized, plc: p.plcState };
       else if (spec.kind === "elec-load") {
         const coil = comp.label ? this.coils.get(comp.label) : undefined;
         const state: ComponentSimState = { energized: p.energized, pressure: p.voltage };
@@ -509,6 +560,7 @@ export class ElectricNetwork {
     }
     for (const l of this.loads) {
       const p = this.parts[l.partIndex];
+      if (l.plcInput !== undefined) continue;
       if ((p.spec as LoadSpec).load !== "resistor" && Math.abs(p.voltage) > OVERVOLTAGE * l.nominal) {
         out.push({ componentId: p.comp.id, code: "overvoltage", value: Math.abs(p.voltage) });
       }

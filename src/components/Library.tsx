@@ -37,9 +37,8 @@ export function Library() {
   }, [index, query]);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col border-r border-line bg-panel" aria-label={t("library.title")}>
+    <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-line p-3">
-        <h2 className="mb-2 text-sm font-semibold">{t("library.title")}</h2>
         <label className="flex items-center gap-2 rounded-md border border-line bg-app px-2 focus-within:outline-2 focus-within:outline-accent">
           <Search size={14} className="shrink-0 text-muted" aria-hidden />
           <input
@@ -72,7 +71,7 @@ export function Library() {
           </details>
         ))}
       </div>
-    </aside>
+    </div>
   );
 }
 

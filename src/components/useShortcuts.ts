@@ -13,6 +13,12 @@ export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
+      // Ctrl+K abre a paleta de comandos em qualquer lugar (menos dentro de outra janela).
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && !target?.closest("dialog")) {
+        e.preventDefault();
+        useUi.getState().setPalette(true);
+        return;
+      }
       if (target?.closest("input, textarea, select, [contenteditable], dialog")) return;
       const s = useEditor.getState();
       const sim = useSim.getState();

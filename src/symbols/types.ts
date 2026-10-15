@@ -33,7 +33,9 @@ export type ParamDef =
   | { key: string; type: "boolean"; default: boolean }
   /** `autoLabel`: valor inicial numerado sozinho com este prefixo (ex.: "Y" → Y1, Y2…). */
   | { key: string; type: "text"; default: string; autoLabel?: string }
-  | { key: string; type: "select"; default: string; options: string[] };
+  | { key: string; type: "select"; default: string; options: string[] }
+  /** Programa do CLP (texto JSON), editado num editor próprio de ladder/GRAFCET. */
+  | { key: string; type: "program"; default: string };
 
 export interface SymbolProps {
   params: Record<string, ParamValue>;

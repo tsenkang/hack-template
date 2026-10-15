@@ -17,7 +17,7 @@ const EXPORT_STYLE = `
   .label { font-size: 10px; font-weight: 600; }
 `;
 
-function download(filename: string, blob: Blob) {
+export function download(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

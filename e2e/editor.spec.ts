@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("mostra as 4 áreas da tela", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "Biblioteca" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Biblioteca" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Propriedades" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Lista de peças" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Desfazer/ })).toBeVisible();

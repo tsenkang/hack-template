@@ -3,14 +3,37 @@ import { create } from "zustand";
 
 export type Theme = "light" | "dark";
 export type BottomTab = "charts" | "phases" | "parts" | "warnings";
+/** Aluno: interface enxuta, sem soluções. Professor: cria exercícios e vê as soluções. */
+export type Role = "student" | "teacher";
+export type SideTab = "parts" | "circuits" | "exercises";
 
 const THEME_KEY = "fluxolab:theme";
+const ROLE_KEY = "fluxolab:role";
+
+function readRole(): Role {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(ROLE_KEY) === "teacher" ? "teacher" : "student";
+  } catch {
+    return "student";
+  }
+}
 
 interface UiState {
   theme: Theme;
   bottomOpen: boolean;
   bottomTab: BottomTab;
   openDialog: boolean;
+  plcEditor: boolean;
+  palette: boolean;
+  /** Modo Explique: o painel da direita explica a peça clicada e o que ela está fazendo agora. */
+  explain: boolean;
+  role: Role;
+  sideTab: SideTab;
+  setPlcEditor(open: boolean): void;
+  setPalette(open: boolean): void;
+  toggleExplain(): void;
+  setRole(role: Role): void;
+  setSideTab(tab: SideTab): void;
   setTheme(theme: Theme): void;
   toggleTheme(): void;
   setBottomTab(tab: BottomTab): void;
@@ -29,6 +52,31 @@ export const useUi = create<UiState>()((set, get) => ({
   bottomOpen: true,
   bottomTab: "parts",
   openDialog: false,
+  plcEditor: false,
+  palette: false,
+  explain: false,
+  role: readRole(),
+  sideTab: "parts",
+  setPlcEditor(open) {
+    set({ plcEditor: open });
+  },
+  setPalette(open) {
+    set({ palette: open });
+  },
+  toggleExplain() {
+    set({ explain: !get().explain });
+  },
+  setRole(role) {
+    try {
+      localStorage.setItem(ROLE_KEY, role);
+    } catch {
+      // sem armazenamento: vale só nesta sessão
+    }
+    set({ role });
+  },
+  setSideTab(tab) {
+    set({ sideTab: tab });
+  },
   setTheme(theme) {
     document.documentElement.classList.toggle("dark", theme === "dark");
     try {

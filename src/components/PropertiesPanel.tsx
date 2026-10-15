@@ -6,8 +6,10 @@ import type { ComponentInstance, ParamValue } from "@/engine/core/types";
 import { t, tDynamic } from "@/i18n";
 import { selectActiveCircuit, useEditor } from "@/store/editor-store";
 import { isSimulating, useSim } from "@/store/sim-store";
+import { useUi } from "@/store/ui-store";
 import { getDef } from "@/symbols/registry";
 import type { ParamDef } from "@/symbols/types";
+import { explainNow, portPressures } from "./explain";
 import { IconButton } from "./IconButton";
 import { SymbolPreview } from "./SymbolPreview";
 
@@ -19,6 +21,7 @@ export function PropertiesPanel() {
   const circuit = useEditor(selectActiveCircuit);
   const selection = useEditor((s) => s.selection);
   const selected = circuit.components.filter((c) => selection.includes(c.id));
+  const explainOn = useUi((s) => s.explain);
 
   return (
     <aside className="flex h-full min-h-0 flex-col border-l border-line bg-panel" aria-label={t("properties.title")}>
@@ -26,6 +29,7 @@ export function PropertiesPanel() {
       <div className="min-h-0 flex-1 overflow-y-auto p-3 text-sm">
         {selected.length === 0 && (
           <div className="space-y-2 text-muted">
+            {explainOn && <p className="font-medium text-accent">{t("explain.pick")}</p>}
             <p>{t("properties.nothingSelected")}</p>
             <p>{t("properties.circuitInfo", { components: circuit.components.length })}</p>
           </div>
@@ -37,8 +41,46 @@ export function PropertiesPanel() {
   );
 }
 
+/** Modo Explique: o que a peça faz, o princípio da categoria e o que está acontecendo agora. */
+function ExplainSection({ comp }: { comp: ComponentInstance }) {
+  const def = getDef(comp.type);
+  const snapshot = useSim((s) => s.snapshot);
+  if (!def) return null;
+  const now = snapshot ? explainNow(def, comp, snapshot) : [];
+  const ports = snapshot ? portPressures(def, comp, snapshot) : [];
+  return (
+    <section className="space-y-2 rounded-lg border border-accent/40 bg-accent-soft/50 p-3" data-testid="explain" aria-live="polite">
+      <h4 className="text-xs font-semibold tracking-wide text-accent uppercase">{t("explain.title")}</h4>
+      <p>
+        <span className="font-semibold">{t("explain.principle")}: </span>
+        {tDynamic(`explainCategory.${def.category}`)}
+      </p>
+      <div>
+        <p className="font-semibold">{t("explain.now")}</p>
+        {!snapshot ? (
+          <p className="text-muted">{t("explain.startSim")}</p>
+        ) : now.length === 0 && ports.length === 0 ? (
+          <p className="text-muted">{t("explain.nothing")}</p>
+        ) : (
+          <ul className="list-disc space-y-0.5 pl-4" data-testid="explain-now">
+            {now.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {ports.length > 0 && (
+          <p className="mt-1 text-xs text-muted tabular-nums">
+            {t("explain.ports")}: {ports.map((p) => `${p.port} = ${p.bar.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bar`).join(" · ")}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ComponentProperties({ comp }: { comp: ComponentInstance }) {
   const def = getDef(comp.type);
+  const explain = useUi((s) => s.explain);
   if (!def) return null;
   const s = useEditor.getState;
 
@@ -51,6 +93,8 @@ function ComponentProperties({ comp }: { comp: ComponentInstance }) {
           <p className="mt-1 text-xs text-muted">{tDynamic(`parts.${comp.type}.description`)}</p>
         </div>
       </header>
+
+      {explain && <ExplainSection comp={comp} />}
 
       <Field id="prop-label" label={t("properties.label")} help={t("properties.labelHelp")}>
         <CommitInput
@@ -137,6 +181,20 @@ function ParamField({ param, value, onChange }: { param: ParamDef; value: ParamV
             </option>
           ))}
         </select>
+      </Field>
+    );
+  }
+  if (param.type === "program") {
+    return (
+      <Field id={id} label={label} help={help}>
+        <button
+          id={id}
+          type="button"
+          className="h-8 w-full rounded-md border border-line bg-app px-2 text-sm font-medium hover:bg-hover"
+          onClick={() => useUi.getState().setPlcEditor(true)}
+        >
+          {t("plc.edit")}
+        </button>
       </Field>
     );
   }

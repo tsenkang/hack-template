@@ -4,6 +4,7 @@
  */
 import { POSITION_ACTUATORS, type SimSpec } from "../core/sim-types";
 import type { Project } from "../core/types";
+import { checkProgram, parseProgram } from "../logic/plc";
 
 export type Severity = "error" | "warning" | "info";
 
@@ -25,7 +26,8 @@ export type DiagnosticCode =
   | "unused-solenoid"
   | "no-hyd-supply"
   | "open-port-oil"
-  | "pump-no-tank";
+  | "pump-no-tank"
+  | "plc-program";
 
 export interface Diagnostic {
   severity: Severity;
@@ -149,6 +151,12 @@ function checkElectric(project: Project, lookup: (type: string) => DiagnosticPar
   }
 
   for (const x of electric) {
+    if (x.spec?.kind === "elec-plc") {
+      const issues = checkProgram(parseProgram(x.comp.params.program));
+      if (issues.length > 0) {
+        out.push({ severity: "error", code: "plc-program", circuitId: x.circuit.id, componentId: x.comp.id, vars: { count: issues.length } });
+      }
+    }
     if (x.spec?.kind === "elec-switch" && x.spec.drive === "relay" && !relayCoils.has(x.comp.label)) {
       out.push({ severity: "warning", code: "unknown-coil", circuitId: x.circuit.id, componentId: x.comp.id, vars: { label: x.comp.label || "—" } });
     }

@@ -9,9 +9,11 @@ import { loadLastProject } from "@/persistence/storage";
 import { useEditor } from "@/store/editor-store";
 import { BottomPanel } from "./BottomPanel";
 import { CircuitTabs } from "./CircuitTabs";
-import { Library } from "./Library";
+import { CommandPalette } from "./CommandPalette";
 import { OpenDialog } from "./OpenDialog";
+import { PlcEditor } from "./plc/PlcEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
+import { SidePanel } from "./SidePanel";
 import { Toasts } from "./Toasts";
 import { TopBar, Logo } from "./TopBar";
 import { useAutosave } from "./useAutosave";
@@ -50,7 +52,7 @@ export function AppShell() {
       <TopBar />
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[15rem_minmax(0,1fr)_17rem] xl:grid-cols-[17rem_minmax(0,1fr)_19rem]">
         <div className="hidden min-h-0 md:block">
-          <Library />
+          <SidePanel />
         </div>
         <main className="flex min-h-0 min-w-0 flex-col">
           <CircuitTabs />
@@ -65,6 +67,8 @@ export function AppShell() {
         </div>
       </div>
       <OpenDialog />
+      <PlcEditor />
+      <CommandPalette />
       <Toasts />
     </div>
   );

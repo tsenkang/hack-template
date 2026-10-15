@@ -6,6 +6,7 @@ import { focusComponent } from "@/editor/actions";
 import { t, tDynamic, type I18nKey } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { useUi, type BottomTab } from "@/store/ui-store";
+import { ChartsPanel } from "./ChartsPanel";
 import { diagnosticMessage, SEVERITY_ORDER, useDiagnostics } from "./diagnostics";
 import { IconButton } from "./IconButton";
 import { PhaseDiagram } from "./PhaseDiagram";
@@ -63,7 +64,7 @@ export function BottomPanel() {
           {bottomTab === "parts" && <PartsList />}
           {bottomTab === "phases" && <PhaseDiagram />}
           {bottomTab === "warnings" && <WarningsList />}
-          {bottomTab === "charts" && <p className="text-muted">{t("bottom.chartsEmpty")}</p>}
+          {bottomTab === "charts" && <ChartsPanel />}
         </div>
       )}
     </section>

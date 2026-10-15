@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 5 — Hidráulica** concluída. Aguardando OK para iniciar a Fase 6.
+> Status: **Fase 6 — Interatividade avançada** concluída. Aguardando OK para iniciar a Fase 7.
 
 ---
 
@@ -295,5 +295,27 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - **Trepidação em baixa velocidade**: um teste mostrou que, em velocidade baixa, o cilindro hidráulico trepidava (*stick-slip*). A trepidação existe na prática, mas aqui estava exagerada. Por isso o cilindro hidráulico usa amortecimento viscoso de 10 000 N·s/m e atrito de partida de 1% da força a 100 bar, valores típicos de vedações em óleo. O pneumático continua com os valores anteriores.
 - **Temperatura do óleo** não é simulada: o termômetro mostra o valor ajustado, e o motor usa as propriedades do óleo a 40 °C.
 
+### Fase 6 — Interatividade avançada ✅
+- **CLP com ladder e GRAFCET** (peça nova *Elétrica · CLP*): 8 entradas I0…I7 (ligam com 24 V), 8 saídas Q0…Q7 (ligam o L+ na saída), alimentação L+/M.
+  - O programa fica dentro do projeto e é editado numa janela própria (dois cliques no CLP ou “Editar programa”).
+  - **Ladder**: cada degrau é uma condição em texto (`(I0 | Q0) & !I1`) desenhada como contatos em série/paralelo, com bobina de saída, SET, RESET, temporizadores TON/TOF e contador CTU com reset. Na simulação, contatos fechados e bobinas ligadas ficam coloridos.
+  - **GRAFCET**: etapas com ações, transições com condição, divergência/convergência em E e temporização `3s/X2`. O diagrama é desenhado ao lado, com as etapas ativas coloridas ao vivo.
+  - Os dois podem ser usados juntos (o GRAFCET roda antes do ladder, como num ciclo de varredura). Programas com erro aparecem nos avisos.
+- **Gráficos ao vivo** (aba Gráficos): posição e velocidade dos cilindros, pressão dos manômetros, vazão, rotação de motores e tensão nas bobinas. Uma faixa por grandeza, mesmo eixo de tempo, cursor com os valores. Escolha automática (cilindros e manômetros) ou manual.
+- **Modo Explique** (botão na barra de cima): o painel da direita mostra o princípio da categoria da peça e, durante a simulação, frases sobre o que ela está fazendo agora (“a válvula está acionada: 1→4, 2→3”, “a haste avança a 0,25 m/s”) e a pressão em cada conector.
+- **Modos Aluno e Professor** (seletor na barra): o aluno não vê as soluções; o professor vê, e pode **criar exercícios**: monta a solução, simula acionando os botões, e o roteiro gravado vira a correção automática. O exercício é baixado em `.json` (com ou sem solução) e o aluno importa.
+- **Exercícios guiados** (aba Exercícios): 12 exercícios do básico ao avançado (comando direto até GRAFCET no CLP e hidráulica), com enunciado, rótulos obrigatórios e dicas uma a uma. O botão **Conferir** roda o circuito do aluno sozinho, aciona os botões do roteiro na hora certa e compara a ordem dos movimentos (a mesma do diagrama de fases).
+- **49 circuitos prontos** (aba Circuitos), com busca, nível e explicação passo a passo: 21 de pneumática (comandos direto/indireto, E/OU, memória, temporizador, contador, A+B+A−B−, A+B+B−A− com escamoteável e cascata, vácuo, regulador…), 11 de eletropneumática (selo, fim de curso, ciclo contínuo, relé de tempo, contador, 5/3 com emergência, pressostato, bimanual), 4 de CLP, 11 de hidráulica (alívio, meter-out, compensada, motor, acumulador, retenção pilotada, sequência, redutora, contrabalanço, proporcional) e 2 de eletro-hidráulica.
+  - **Todos são testados**: cada circuito monta sem erros, e os que têm roteiro precisam fazer exatamente a sequência esperada (ex.: `A+ B+ B− A−`).
+- **Paleta Ctrl+K**: uma busca para ações (simular, salvar, exportar, tema, modo Explique…), inserir peças, abrir circuitos prontos e exercícios.
+- Peça nova: **3/2 NF com alavanca e trava** (chave liga/desliga pneumática, para ciclo contínuo).
+- **Testes**: 442 unitários (incluindo os 49 circuitos e os 12 exercícios, cuja solução precisa passar na correção e cujo projeto inicial não pode passar) e 23 de tela. O critério da fase, **um exercício corrigido automaticamente**, é testado na tela: errado sem ligações e “Correto” depois de montar.
+
+**Decisões da Fase 6**
+- **Ladder escrito como condição em texto, desenhado automaticamente**, em vez de um editor de arrastar contatos. É mais rápido de editar no teclado, não tem como ficar “meio ligado”, e o desenho sai sempre certo. A sintaxe é a mesma das transições do GRAFCET.
+- **Correção dos exercícios pela sequência dos cilindros**, rodando o circuito do aluno sem o Worker. Assim qualquer solução correta passa (ex.: o A+B+B−A− aceita escamoteável, cascata ou CLP), sem exigir uma montagem igual à do gabarito.
+- **Exercícios do professor ficam no navegador e circulam como arquivo**, já que o site não tem servidor. O projeto inicial do aluno é gerado sozinho (só cilindros e fontes).
+- **Duplo clique no CLP**: a área de desenho captura o ponteiro para arrastar, então o duplo clique é contado “na mão”.
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 6 — Interatividade avançada** (modo Explique, medições e gráficos, modos Aluno/Professor, exercícios guiados, biblioteca de 40+ circuitos prontos, GRAFCET e CLP simples, paleta Ctrl+K).
+Com o OK do usuário: **Fase 7 — Acabamento** (tablet, PWA instalável e offline, exportar PDF, en/es, desempenho com 150 peças, acessibilidade, modo apresentação, README final).

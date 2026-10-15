@@ -5,11 +5,13 @@ import {
   Download,
   FilePlus2,
   FolderOpen,
+  Lightbulb,
   Moon,
   Pause,
   Play,
   Redo2,
   Save,
+  Search,
   Square,
   StepForward,
   Sun,
@@ -31,6 +33,8 @@ export function TopBar() {
   const canRedo = useEditor((s) => s.future.length > 0);
   const projectName = useEditor((s) => s.project.name);
   const theme = useUi((s) => s.theme);
+  const explain = useUi((s) => s.explain);
+  const role = useUi((s) => s.role);
   const status = useSim((s) => s.status);
   const speed = useSim((s) => s.speed);
   const simulating = status !== "stopped";
@@ -108,7 +112,32 @@ export function TopBar() {
           ))}
         </select>
       </div>
+      {divider}
+      <IconButton label={t("explain.toggleHint")} active={explain} onClick={() => useUi.getState().toggleExplain()} data-testid="explain-toggle">
+        <Lightbulb size={18} />
+        <span className="ml-1 hidden text-xs xl:inline">{t("explain.toggle")}</span>
+      </IconButton>
       <span className="flex-1" />
+      <button
+        type="button"
+        onClick={() => useUi.getState().setPalette(true)}
+        className="mr-1 hidden h-8 items-center gap-2 rounded-md border border-line px-2 text-xs text-muted hover:bg-hover sm:inline-flex"
+        aria-label={t("palette.open")}
+      >
+        <Search size={14} aria-hidden /> {t("palette.button")}
+        <kbd className="rounded border border-line px-1 font-sans">Ctrl K</kbd>
+      </button>
+      <select
+        aria-label={t("roles.label")}
+        title={t("roles.hint")}
+        value={role}
+        onChange={(e) => useUi.getState().setRole(e.target.value as "student" | "teacher")}
+        className="mr-1 h-8 rounded-md border border-line bg-panel px-1 text-xs"
+        data-testid="role-select"
+      >
+        <option value="student">{t("roles.student")}</option>
+        <option value="teacher">{t("roles.teacher")}</option>
+      </select>
       <IconButton
         label={theme === "dark" ? t("toolbar.themeLight") : t("toolbar.themeDark")}
         onClick={() => useUi.getState().toggleTheme()}

@@ -5,6 +5,8 @@ import { memo } from "react";
 import type { ComponentSimState } from "@/engine/core/sim-types";
 import type { ComponentInstance } from "@/engine/core/types";
 import { tDynamic } from "@/i18n";
+import { useEditor } from "@/store/editor-store";
+import { useUi } from "@/store/ui-store";
 import { getDef } from "@/symbols/registry";
 import { componentBounds, localToWorld, svgTransform } from "./geometry";
 
@@ -18,6 +20,8 @@ interface Props {
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onPortPointerDown: (e: React.PointerEvent, id: string, portId: string) => void;
 }
+
+const lastPlcClick = { id: "", t: 0 };
 
 /** Uma peça no desenho: símbolo, conectores, rótulo e contorno de seleção. */
 export const ComponentNode = memo(function ComponentNode({
@@ -44,7 +48,20 @@ export const ComponentNode = memo(function ComponentNode({
       role="button"
       aria-label={comp.label ? `${name} ${comp.label}` : name}
       aria-pressed={selected}
-      onPointerDown={(e) => onPointerDown(e, comp.id)}
+      onPointerDown={(e) => {
+        onPointerDown(e, comp.id);
+        // CLP: dois cliques abrem o editor do programa. (O desenho captura o ponteiro,
+        // então o evento dblclick não chega aqui; contamos os cliques na mão.)
+        if (def.sim?.kind === "elec-plc") {
+          const now = performance.now();
+          if (lastPlcClick.id === comp.id && now - lastPlcClick.t < 450) {
+            useEditor.getState().select([comp.id]);
+            useUi.getState().setPlcEditor(true);
+          }
+          lastPlcClick.id = comp.id;
+          lastPlcClick.t = now;
+        }
+      }}
     >
       <g transform={svgTransform(comp, def)}>
         {/* área de clique: a caixa inteira, não só os traços */}
