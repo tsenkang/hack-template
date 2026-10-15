@@ -180,7 +180,7 @@ export class FluidNetwork {
   }
 
   /** Estado das peças, das linhas, pressão nos conectores e avisos deste domínio. */
-  snapshot(out: SimSnapshot) {
+  snapshot(out: SimSnapshot, withPorts = true) {
     const portFlow = new Map<string, number>();
     const add = (k: string | undefined, v: number) => k && portFlow.set(k, (portFlow.get(k) ?? 0) + v);
     this.branches.forEach((br, i) => {
@@ -188,7 +188,7 @@ export class FluidNetwork {
       add(br.portB, this.flows[i]);
     });
     for (const el of this.elements) if (!el.id.startsWith("vent:")) out.components[el.id] = el.state(this.runtime);
-    for (const [k, i] of this.portNet) out.ports[k] = toBarGauge(this.p[i]);
+    if (withPorts) for (const [k, i] of this.portNet) out.ports[k] = toBarGauge(this.p[i]);
     for (const w of this.circuit.wires) {
       if (w.domain !== this.setup.domain) continue;
       const net = this.portNet.get(w.from)!;

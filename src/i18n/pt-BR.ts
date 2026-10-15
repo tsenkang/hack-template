@@ -16,7 +16,7 @@ export const ptBR = {
     exportJson: "Arquivo do projeto (.json)",
     exportSvg: "Imagem vetorial (.svg)",
     exportPng: "Imagem (.png)",
-    exportPdf: "PDF (em breve)",
+    exportPdf: "PDF para imprimir (todas as abas + lista de peças)",
     undo: "Desfazer",
     redo: "Refazer",
     play: "Iniciar simulação",
@@ -272,12 +272,14 @@ export const ptBR = {
   },
   tabs: {
     newCircuit: "Novo circuito",
+    list: "Abas de circuito",
     defaultName: "Circuito {n}",
     rename: "Dê dois cliques para renomear",
     close: "Fechar aba",
     confirmClose: "Excluir o circuito “{name}” e todas as peças dele?",
   },
   bottom: {
+    panel: "Painel de baixo",
     charts: "Gráficos",
     phases: "Diagrama de fases",
     parts: "Lista de peças",
@@ -375,6 +377,22 @@ export const ptBR = {
     "elec-protection": "Proteções abrem o circuito quando a corrente passa do limite, evitando danos.",
     "elec-plc": "O CLP lê as entradas, executa o programa (ladder/GRAFCET) e liga as saídas, num ciclo que se repete sem parar.",
   },
+  panels: {
+    library: "Biblioteca, circuitos e exercícios",
+    properties: "Propriedades",
+  },
+  present: {
+    enter: "Modo apresentação (tela cheia para o projetor)",
+    exit: "Sair da apresentação",
+  },
+  pdf: {
+    footer: "Feito no FluxoLab em {date}",
+    emptyTab: "Aba sem peças.",
+  },
+  pwa: {
+    update: "Nova versão do FluxoLab disponível.",
+    reload: "Recarregar",
+  },
   lessons: {
     panel: "Peças, circuitos prontos e exercícios",
     circuits: "Circuitos",
@@ -449,6 +467,7 @@ export const ptBR = {
       exportJson: "Exportar arquivo .json",
       exportSvg: "Exportar imagem .svg",
       exportPng: "Exportar imagem .png",
+      exportPdf: "Exportar PDF para imprimir",
       undo: "Desfazer",
       redo: "Refazer",
       play: "Iniciar / pausar simulação",

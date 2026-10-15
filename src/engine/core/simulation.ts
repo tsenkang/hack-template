@@ -74,10 +74,11 @@ export class Simulation {
     return this.oil.netOf(k) !== undefined ? this.oil.pressureAt(k) : this.air.pressureAt(k);
   }
 
-  snapshot(): SimSnapshot {
+  /** Estado atual. `withPorts = false` deixa de fora a pressão de cada conector (mensagem menor). */
+  snapshot(withPorts = true): SimSnapshot {
     const snap: SimSnapshot = { time: this.time, components: {}, wires: {}, ports: {}, warnings: [] };
-    this.air.snapshot(snap);
-    this.oil.snapshot(snap);
+    this.air.snapshot(snap, withPorts);
+    this.oil.snapshot(snap, withPorts);
     Object.assign(snap.components, this.electric.states());
     Object.assign(snap.wires, this.electric.wireStates());
     snap.warnings.unshift(...this.electric.warnings());

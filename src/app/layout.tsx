@@ -6,6 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: `${ptBR.app.name} — ${ptBR.app.tagline}`,
   description: ptBR.app.tagline,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: ptBR.app.name, statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

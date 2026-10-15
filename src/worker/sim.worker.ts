@@ -20,7 +20,14 @@ let lastWall = 0;
 let debt = 0;
 
 const post = (msg: FromWorker) => self.postMessage(msg);
-const publish = (lagging = false) => sim && post({ type: "snapshot", snapshot: sim.snapshot(), lagging });
+/** A pressão de cada conector (modo Explique) vai a cada PORTS_EVERY quadros. */
+const PORTS_EVERY = 6;
+let frame = 0;
+const publish = (lagging = false, full = true) => {
+  if (!sim) return;
+  const withPorts = full || ++frame % PORTS_EVERY === 0;
+  post({ type: "snapshot", snapshot: sim.snapshot(withPorts), lagging, noPorts: !withPorts });
+};
 
 function tick() {
   if (!sim) return;
@@ -34,7 +41,7 @@ function tick() {
   }
   const lagging = debt > 0.1 * speed + DT;
   if (lagging) debt = 0; // não acumula atraso infinito
-  publish(lagging);
+  publish(lagging, false);
 }
 
 function stopTimer() {

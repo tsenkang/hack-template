@@ -16,8 +16,12 @@ export type I18nKey = Paths<Dictionary>;
 const LOCALES: Record<string, Dictionary> = { "pt-BR": ptBR };
 let current: Dictionary = ptBR;
 
+/** Textos já encontrados (sem variáveis): a busca no dicionário roda uma vez por chave. */
+let cache = new Map<string, string>();
+
 export function setLocale(locale: string) {
   current = LOCALES[locale] ?? ptBR;
+  cache = new Map();
 }
 
 function lookup(dict: unknown, path: string): string | undefined {
@@ -38,7 +42,11 @@ function lookup(dict: unknown, path: string): string | undefined {
 
 /** Traduz uma chave, trocando `{nome}` pelos valores de `vars`. */
 export function t(key: I18nKey, vars?: Record<string, string | number>): string {
-  const text = lookup(current, key) ?? lookup(ptBR, key) ?? key;
+  let text = cache.get(key);
+  if (text === undefined) {
+    text = lookup(current, key) ?? lookup(ptBR, key) ?? key;
+    cache.set(key, text);
+  }
   return vars ? text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`)) : text;
 }
 

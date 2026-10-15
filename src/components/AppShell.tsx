@@ -1,6 +1,9 @@
 "use client";
 
+import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { useUi } from "@/store/ui-store";
 import { Canvas } from "@/editor/Canvas";
 import { SimLegend } from "@/editor/SimLegend";
 import { useSim } from "@/store/sim-store";
@@ -15,8 +18,10 @@ import { PlcEditor } from "./plc/PlcEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { SidePanel } from "./SidePanel";
 import { Toasts } from "./Toasts";
+import { PresentationBar } from "./PresentationBar";
 import { TopBar, Logo } from "./TopBar";
 import { useAutosave } from "./useAutosave";
+import { usePwa } from "./usePwa";
 import { useShortcuts } from "./useShortcuts";
 
 /**
@@ -26,6 +31,7 @@ import { useShortcuts } from "./useShortcuts";
 export function AppShell() {
   const [ready, setReady] = useState(false);
   const simulating = useSim((s) => s.status !== "stopped");
+  const { leftDrawer, rightDrawer, presenting } = useUi(useShallow((s) => ({ leftDrawer: s.leftDrawer, rightDrawer: s.rightDrawer, presenting: s.presenting })));
 
   // Ao abrir o app, reabre o último projeto salvo neste navegador.
   useEffect(() => {
@@ -37,6 +43,7 @@ export function AppShell() {
 
   useAutosave(ready);
   useShortcuts();
+  usePwa();
 
   if (!ready) {
     return (
@@ -49,22 +56,51 @@ export function AppShell() {
 
   return (
     <div className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden select-none">
-      <TopBar />
-      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[15rem_minmax(0,1fr)_17rem] xl:grid-cols-[17rem_minmax(0,1fr)_19rem]">
-        <div className="hidden min-h-0 md:block">
-          <SidePanel />
-        </div>
+      {presenting ? <PresentationBar /> : <TopBar />}
+      <div
+        className={clsx(
+          "relative grid min-h-0 grid-cols-[minmax(0,1fr)]",
+          !presenting && "lg:grid-cols-[15rem_minmax(0,1fr)_17rem] xl:grid-cols-[17rem_minmax(0,1fr)_19rem]",
+        )}
+      >
+        {!presenting && (
+          <div
+            className={clsx(
+              "min-h-0 lg:static lg:block lg:w-auto lg:shadow-none",
+              leftDrawer ? "absolute inset-y-0 left-0 z-30 block w-[min(20rem,85vw)] shadow-2xl" : "hidden",
+            )}
+            data-testid="left-panel"
+          >
+            <SidePanel />
+          </div>
+        )}
         <main className="flex min-h-0 min-w-0 flex-col">
-          <CircuitTabs />
+          {!presenting && <CircuitTabs />}
           {simulating && <SimLegend />}
           <div className="min-h-0 flex-1">
             <Canvas />
           </div>
-          <BottomPanel />
+          {!presenting && <BottomPanel />}
         </main>
-        <div className="hidden min-h-0 md:block">
-          <PropertiesPanel />
-        </div>
+        {!presenting && (
+          <div
+            className={clsx(
+              "min-h-0 lg:static lg:block lg:w-auto lg:shadow-none",
+              rightDrawer ? "absolute inset-y-0 right-0 z-30 block w-[min(20rem,85vw)] shadow-2xl" : "hidden",
+            )}
+            data-testid="right-panel"
+          >
+            <PropertiesPanel />
+          </div>
+        )}
+        {(leftDrawer || rightDrawer) && (
+          <button
+            type="button"
+            aria-label={t("dialogs.close")}
+            className="absolute inset-0 z-20 bg-black/20 lg:hidden"
+            onClick={() => useUi.getState().setDrawer("left", false)}
+          />
+        )}
       </div>
       <OpenDialog />
       <PlcEditor />

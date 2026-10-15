@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { memo } from "react";
 import type { WireSimState } from "@/engine/core/sim-types";
 import type { Point } from "@/engine/core/types";
+import { useSim } from "@/store/sim-store";
 import { pointsToPath } from "./wires";
 
 /** Pressão (bar) acima da qual a linha é considerada "com pressão". */
@@ -62,92 +63,78 @@ interface Props {
   pilot: boolean;
   /** Domínio: ar, óleo ou fio elétrico (no fio, o estado é tensão em V e corrente em mA). */
   domain: "pneumatic" | "hydraulic" | "electric";
-  state?: WireSimState;
+  /** Visível na tela: só então acompanha a simulação. */
+  live: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
 }
 
-/**
- * Uma linha (tubo). Na simulação a cor indica a pressão e traços animados
- * mostram para onde o ar anda. A forma da linha (espessura, tracejado) também
- * muda, para não depender só da cor.
- */
-export const WireView = memo(function WireView({ id, points, selected, traced, pilot, domain, state, onPointerDown }: Props) {
-  const d = pointsToPath(points);
+/** Aparência de uma linha na simulação, já reduzida ao que muda o desenho. */
+interface Visual {
+  /** Classe do estado (com pressão, vazia, retorno, corrente…). */
+  cls: string;
+  /** Intensidade da cor [%], em degraus de 5% (só ar e óleo com pressão). */
+  pct: number;
+  /** Duração do ciclo da animação do fluxo [s] (0 = parado). */
+  dur: number;
+  reverse: boolean;
+}
+
+function visualOf(domain: Props["domain"], state: WireSimState | undefined): Visual | null {
+  if (!state) return null;
+  const step5 = (v: number) => Math.round(v / 5) * 5;
   if (domain === "hydraulic") {
-    const pressurized = state !== undefined && state.p > OIL_ON;
-    const level = state ? Math.min(1, Math.max(0, state.p / OIL_FULL)) : 0;
-    const duration = state ? oilDuration(state.q) : null;
-    const returning = state !== undefined && !pressurized && duration !== null;
-    return (
-      <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
-        <path className="wire-hit" d={d} />
-        {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
-        <path
-          className={clsx(
-            "wire",
-            pilot && "wire-pilot",
-            state && (pressurized ? "wire-oil-pressure" : returning ? "wire-oil-return" : "wire-oil-empty"),
-          )}
-          style={
-            pressurized ? { stroke: `color-mix(in srgb, var(--oil-pressure) ${Math.round(55 + 45 * level)}%, var(--oil-empty))` } : undefined
-          }
-          d={d}
-        />
-        {duration !== null && (
-          <path className={clsx("wire-flow", state!.q < 0 && "reverse")} style={{ animationDuration: `${duration}s` }} d={d} data-export-ignore />
-        )}
-      </g>
-    );
+    const pressurized = state.p > OIL_ON;
+    const dur = oilDuration(state.q) ?? 0;
+    const level = Math.min(1, Math.max(0, state.p / OIL_FULL));
+    return {
+      cls: pressurized ? "wire-oil-pressure" : dur ? "wire-oil-return" : "wire-oil-empty",
+      pct: pressurized ? step5(55 + 45 * level) : 0,
+      dur,
+      reverse: state.q < 0,
+    };
   }
   if (domain === "electric") {
-    const live = state !== undefined && Math.abs(state.p) > LIVE_VOLTS;
-    const duration = state ? currentDuration(state.q) : null;
-    return (
-      <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
-        <path className="wire-hit" d={d} />
-        {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
-        <path
-          className={clsx("wire", state && (duration !== null ? "wire-current" : live ? "wire-live" : "wire-empty-elec"))}
-          d={d}
-        />
-        {duration !== null && (
-          <path
-            className={clsx("wire-flow", state!.q < 0 && "reverse")}
-            style={{ animationDuration: `${duration}s` }}
-            d={d}
-            data-export-ignore
-          />
-        )}
-      </g>
-    );
+    const dur = currentDuration(state.q) ?? 0;
+    return { cls: dur ? "wire-current" : Math.abs(state.p) > LIVE_VOLTS ? "wire-live" : "wire-empty-elec", pct: 0, dur, reverse: state.q < 0 };
   }
-  const pressurized = state !== undefined && state.p > PRESSURE_ON;
-  const level = state ? Math.min(1, Math.max(0, state.p / PRESSURE_FULL)) : 0;
-  const duration = state ? flowDuration(state.q) : null;
-  const style = state
-    ? { stroke: `color-mix(in srgb, var(--line-pressure) ${Math.round(45 + 55 * level)}%, var(--line-empty))` }
-    : undefined;
+  const pressurized = state.p > PRESSURE_ON;
+  const level = Math.min(1, Math.max(0, state.p / PRESSURE_FULL));
+  return {
+    cls: pressurized ? "wire-pressurized" : "wire-empty",
+    pct: pressurized ? step5(45 + 55 * level) : 0,
+    dur: flowDuration(state.q) ?? 0,
+    reverse: state.q < 0,
+  };
+}
 
+const keyOf = (v: Visual | null) => (v ? `${v.cls}|${v.pct}|${v.dur}|${v.reverse ? 1 : 0}` : "");
+
+/**
+ * Uma linha (tubo ou fio). Na simulação a cor indica a pressão (ou tensão) e traços
+ * animados mostram o sentido do fluxo. A forma (espessura, tracejado) também muda,
+ * para não depender só da cor.
+ *
+ * Desempenho: cada linha lê da simulação só a sua "aparência" resumida (texto curto);
+ * ela só é redesenhada quando essa aparência muda, e não a cada quadro.
+ */
+export const WireView = memo(function WireView({ id, points, selected, traced, pilot, domain, live, onPointerDown }: Props) {
+  const key = useSim((s) => (live ? keyOf(visualOf(domain, s.snapshot?.wires[id])) : ""));
+  const d = pointsToPath(points);
+  const [cls, pct, dur, reverse] = key ? key.split("|") : [];
+  const color = domain === "hydraulic" ? "--oil-pressure" : "--line-pressure";
+  const empty = domain === "hydraulic" ? "--oil-empty" : "--line-empty";
+  const showColor = key !== "" && Number(pct) > 0;
   return (
     <g data-wire-id={id} onPointerDown={(e) => onPointerDown(e, id)}>
       <path className="wire-hit" d={d} />
       {(selected || traced) && <path className={selected ? "wire-selected" : "wire-traced"} d={d} data-export-ignore />}
       <path
-        className={clsx(
-          "wire",
-          pilot && "wire-pilot",
-          state && (pressurized ? "wire-pressurized" : "wire-empty"),
-        )}
-        style={pressurized ? style : undefined}
+        className={clsx("wire", pilot && domain !== "electric" && "wire-pilot", cls)}
+        style={showColor ? { stroke: `color-mix(in srgb, var(${color}) ${pct}%, var(${empty}))` } : undefined}
         d={d}
       />
-      {duration !== null && (
-        <path
-          className={clsx("wire-flow", state!.q < 0 && "reverse")}
-          style={{ animationDuration: `${duration}s` }}
-          d={d}
-          data-export-ignore
-        />
+      {key !== "" && Number(dur) > 0 && (
+        <path className={clsx("wire-flow", reverse === "1" && "reverse")} style={{ animationDuration: `${dur}s` }} d={d} data-export-ignore />
       )}
     </g>
   );

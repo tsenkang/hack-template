@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Point } from "@/engine/core/types";
 import { t } from "@/i18n";
 import { selectActiveCircuit, selectViewport, useEditor } from "@/store/editor-store";
+import { useUi } from "@/store/ui-store";
 import { useSim } from "@/store/sim-store";
 import { MANUAL_ACTUATORS } from "@/engine/core/sim-types";
 import { getDef } from "@/symbols/registry";
@@ -56,6 +57,9 @@ interface WirePreview {
 
 const portKey = (p: { componentId: string; portId: string }) => `${p.componentId}:${p.portId}`;
 
+/** Abaixo deste zoom os textos ficam com menos de ~4 px: são escondidos (ilegíveis e caros de desenhar). */
+const LOD_TEXT_ZOOM = 0.42;
+
 /** Área de desenho: grade, zoom, mover a tela, seleção, ligar linhas e operar peças na simulação. */
 export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -64,7 +68,7 @@ export function Canvas() {
   const selection = useEditor((s) => s.selection);
   const snapEnabled = useEditor((s) => s.snapEnabled);
   const simulating = useSim((s) => s.status !== "stopped");
-  const snapshot = useSim((s) => s.snapshot);
+  const presenting = useUi((st) => st.presenting);
   const [marquee, setMarquee] = useState<Rect | null>(null);
   const [wirePreview, setWirePreview] = useState<WirePreview | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -76,6 +80,32 @@ export function Canvas() {
 
   const selected = useMemo(() => new Set(selection), [selection]);
   const routes = useMemo(() => routeAll(circuit), [circuit]);
+  const canvasSize = useEditor((s) => s.canvasSize);
+  /**
+   * Peças e linhas fora da área visível não acompanham a simulação (não são redesenhadas
+   * a cada quadro). Com o zoom aproximado, só o que aparece na tela gasta tempo.
+   */
+  const visible = useMemo(() => {
+    const margin = 80;
+    const x0 = (-viewport.x - margin) / viewport.zoom;
+    const y0 = (-viewport.y - margin) / viewport.zoom;
+    const x1 = (canvasSize.w - viewport.x + margin) / viewport.zoom;
+    const y1 = (canvasSize.h - viewport.y + margin) / viewport.zoom;
+    const inside = (b: { x: number; y: number; w: number; h: number }) => b.x <= x1 && b.x + b.w >= x0 && b.y <= y1 && b.y + b.h >= y0;
+    const ids = new Set<string>();
+    for (const c of circuit.components) {
+      const def = getDef(c.type);
+      if (def && inside(componentBounds(c, def))) ids.add(c.id);
+    }
+    for (const [id, pts] of routes) {
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const bx = Math.min(...xs);
+      const by = Math.min(...ys);
+      if (inside({ x: bx, y: by, w: Math.max(...xs) - bx, h: Math.max(...ys) - by })) ids.add(id);
+    }
+    return ids;
+  }, [circuit, routes, viewport, canvasSize]);
 
   /** Conectores com linha, conectores soltos por peça, pontos de junção e linhas de piloto. */
   const topology = useMemo(() => {
@@ -400,10 +430,10 @@ export function Canvas() {
   const cursor = panning ? "grabbing" : spaceHeld ? "grab" : "default";
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-canvas">
+    <div className={`relative h-full w-full overflow-hidden bg-canvas ${presenting ? "presenting" : ""}`}>
       <svg
         ref={svgRef}
-        className={`block h-full w-full touch-none select-none outline-none ${wirePreview ? "wiring" : ""} ${simulating ? "simulating" : ""}`}
+        className={`block h-full w-full touch-none select-none outline-none ${wirePreview ? "wiring" : ""} ${simulating ? "simulating" : ""} ${viewport.zoom < LOD_TEXT_ZOOM ? "lod-low" : ""}`}
         style={{ cursor }}
         tabIndex={0}
         role="application"
@@ -446,7 +476,7 @@ export function Canvas() {
                   traced={traced.has(w.id)}
                   pilot={topology.pilotWires.has(w.id)}
                   domain={topology.wireDomain.get(w.id) ?? "pneumatic"}
-                  state={snapshot?.wires[w.id]}
+                  live={visible.has(w.id)}
                   onPointerDown={onWirePointerDown}
                 />
               ) : null;
@@ -458,8 +488,8 @@ export function Canvas() {
               comp={comp}
               selected={selected.has(comp.id)}
               openPorts={topology.openPorts.get(comp.id) ?? ""}
-              simState={snapshot?.components[comp.id]}
               simulating={simulating}
+              live={visible.has(comp.id)}
               onPointerDown={onComponentPointerDown}
               onPortPointerDown={onPortPointerDown}
             />

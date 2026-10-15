@@ -26,7 +26,8 @@ export function BottomPanel() {
 
   return (
     <section className="flex min-h-0 flex-col border-t border-line bg-panel" aria-label={t("bottom.parts")}>
-      <div className="flex items-center gap-1 px-2" role="tablist">
+      <div className="flex items-center gap-1 px-2">
+        <div className="flex items-center gap-1" role="tablist" aria-label={t("bottom.panel")}>
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -49,6 +50,7 @@ export function BottomPanel() {
             )}
           </button>
         ))}
+        </div>
         <span className="flex-1" />
         <IconButton label={bottomOpen ? t("bottom.collapse") : t("bottom.expand")} onClick={toggleBottom}>
           {bottomOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -59,6 +61,7 @@ export function BottomPanel() {
           id="bottom-panel-content"
           role="tabpanel"
           aria-labelledby={`tab-${bottomTab}`}
+          tabIndex={0}
           className="h-44 overflow-y-auto border-t border-line p-3 text-sm"
         >
           {bottomTab === "parts" && <PartsList />}

@@ -142,6 +142,11 @@ function sameComponent(a: ComponentSimState, b: ComponentSimState) {
     const y = b[k];
     if (typeof x === "number" || typeof y === "number") {
       if (!close(x as number | undefined, y as number | undefined, TOLERANCE[k] ?? 0)) return false;
+    } else if (typeof x !== "object" || typeof y !== "object" || x === null || y === null) {
+      if (x !== y) return false;
+    } else if (k === "pressed") {
+      const [p, q] = [x as { left: boolean; right: boolean }, y as { left: boolean; right: boolean }];
+      if (p.left !== q.left || p.right !== q.right) return false;
     } else if (JSON.stringify(x) !== JSON.stringify(y)) return false;
   }
   return true;
@@ -166,7 +171,22 @@ function stabilize(prev: SimSnapshot | null, next: SimSnapshot): SimSnapshot {
   return next;
 }
 
+let pending: { snapshot: SimSnapshot; lagging: boolean; grew: boolean } | null = null;
+let frameRequest: number | null = null;
+let latestPorts: SimSnapshot["ports"] = {};
+
 export const useSim = create<SimState>()((set, get) => {
+  const applyPending = () => {
+    frameRequest = null;
+    const p = pending;
+    pending = null;
+    if (!p || get().status === "stopped") return;
+    set({
+      snapshot: stabilize(get().snapshot, p.snapshot),
+      lagging: p.lagging,
+      ...(p.grew ? { historyVersion: get().historyVersion + 1 } : {}),
+    });
+  };
   const boot = () => {
     worker?.terminate();
     worker = new Worker(new URL("../worker/sim.worker.ts", import.meta.url), { type: "module" });
@@ -175,11 +195,11 @@ export const useSim = create<SimState>()((set, get) => {
       if (msg.type === "snapshot") {
         if (get().status === "stopped") return;
         const grew = recordHistory(msg.snapshot);
-        set({
-          snapshot: stabilize(get().snapshot, msg.snapshot),
-          lagging: msg.lagging,
-          ...(grew ? { historyVersion: get().historyVersion + 1 } : {}),
-        });
+        if (msg.noPorts) msg.snapshot.ports = latestPorts;
+        else latestPorts = msg.snapshot.ports;
+        // Junta as mensagens que chegam entre dois quadros da tela: a tela desenha só a mais nova.
+        pending = { snapshot: msg.snapshot, lagging: msg.lagging, grew: grew || (pending?.grew ?? false) };
+        if (frameRequest === null) frameRequest = requestAnimationFrame(applyPending);
       } else {
         toast(msg.message, "error");
         get().stop();
@@ -215,6 +235,10 @@ export const useSim = create<SimState>()((set, get) => {
     stop() {
       worker?.terminate();
       worker = null;
+      pending = null;
+      latestPorts = {};
+      if (frameRequest !== null) cancelAnimationFrame(frameRequest);
+      frameRequest = null;
       set({ status: "stopped", snapshot: null, lagging: false });
     },
     step() {

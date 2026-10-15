@@ -10,5 +10,12 @@ export type ToWorker =
   | { type: "command"; cmd: SimCommand };
 
 export type FromWorker =
-  | { type: "snapshot"; snapshot: SimSnapshot; /** true se o computador não acompanha a velocidade pedida */ lagging: boolean }
+  | {
+      type: "snapshot";
+      snapshot: SimSnapshot;
+      /** true se o computador não acompanha a velocidade pedida */
+      lagging: boolean;
+      /** Sem a pressão de cada conector (vai só a cada alguns quadros, para a mensagem ficar leve). */
+      noPorts?: boolean;
+    }
   | { type: "error"; message: string };

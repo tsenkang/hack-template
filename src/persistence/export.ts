@@ -13,8 +13,20 @@ const EXPORT_STYLE = `
   .sym-solid { fill: #1f2937; stroke: none; }
   .sym.sym-solid { stroke: #1f2937; }
   .sym-dashed { stroke-dasharray: 4 3; }
+  .sym-active { stroke: #dc2626; }
+  .sym-energized { fill: #fb923c; }
+  .sym-danger { stroke: #c62828; }
   .sym-text, .label { fill: #1f2937; font-family: system-ui, sans-serif; }
   .label { font-size: 10px; font-weight: 600; }
+  .hit, .wire-hit { fill: none; stroke: none; }
+  .wire { fill: none; stroke: #1f2937; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .wire-pilot { stroke-dasharray: 5 3; }
+  .junction-dot { fill: #1f2937; }
+  .ladder text { font-family: system-ui, sans-serif; }
+  .ladder-number { fill: #566070; font-size: 10px; font-weight: 600; }
+  .ladder-head { fill: #566070; font-size: 6px; }
+  .ladder-ref { fill: #1b2230; font-size: 7px; }
+  .ladder-rule { stroke: #566070; stroke-width: 0.6; }
 `;
 
 export function download(filename: string, blob: Blob) {
@@ -65,8 +77,8 @@ export function exportSvg(svgText: string, baseName: string) {
   download(`${safeFileName(baseName)}.svg`, new Blob([svgText], { type: "image/svg+xml" }));
 }
 
-/** Converte o SVG em PNG com o dobro da resolução (fica nítido em projetor). */
-export async function exportPng(svgText: string, baseName: string, scale = 2): Promise<void> {
+/** Desenha o SVG num canvas (fundo branco) e devolve a imagem no formato pedido. */
+export async function rasterize(svgText: string, scale: number, type: "image/png" | "image/jpeg"): Promise<{ blob: Blob; width: number; height: number }> {
   const url = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml" }));
   try {
     const img = new Image();
@@ -80,12 +92,20 @@ export async function exportPng(svgText: string, baseName: string, scale = 2): P
     canvas.height = Math.ceil(img.height * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-    if (!blob) throw new Error("png");
-    download(`${safeFileName(baseName)}.png`, blob);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.92));
+    if (!blob) throw new Error("raster");
+    return { blob, width: canvas.width, height: canvas.height };
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Converte o SVG em PNG com o dobro da resolução (fica nítido em projetor). */
+export async function exportPng(svgText: string, baseName: string, scale = 2): Promise<void> {
+  const { blob } = await rasterize(svgText, scale, "image/png");
+  download(`${safeFileName(baseName)}.png`, blob);
 }

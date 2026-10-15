@@ -18,7 +18,7 @@ export function IconButton({ label, children, active, className, ...rest }: Prop
       aria-label={label}
       aria-pressed={active}
       className={clsx(
-        "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-1.5 text-fg transition-colors",
+        "inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-1.5 text-fg transition-colors pointer-coarse:h-10 pointer-coarse:min-w-10",
         "hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent",
         "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
         active && "bg-accent-soft text-accent",

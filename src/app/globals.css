@@ -421,3 +421,28 @@ body {
 .dark .chart-series-1 { stroke: #fb923c; }
 .dark .chart-series-2 { stroke: #2dd4bf; }
 .dark .chart-series-3 { stroke: #a78bfa; }
+
+/* ---------- Toque (tablet) e modo apresentação ---------- */
+@media (pointer: coarse) {
+  .port-hit {
+    r: 13px;
+  }
+}
+.presenting .sym {
+  stroke-width: 2;
+}
+.presenting .wire {
+  stroke-width: 2.5;
+}
+.presenting .label,
+.presenting .sym-text {
+  font-weight: 600;
+}
+.component:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Nível de detalhe: com o zoom bem afastado, textos não dão para ler; escondê-los deixa o desenho mais leve. */
+.lod-low #circuit-content text {
+  display: none;
+}

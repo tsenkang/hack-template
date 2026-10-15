@@ -29,6 +29,13 @@ interface UiState {
   explain: boolean;
   role: Role;
   sideTab: SideTab;
+  /** Telas estreitas (tablet em pé, celular): biblioteca e propriedades viram gavetas. */
+  leftDrawer: boolean;
+  rightDrawer: boolean;
+  /** Modo apresentação: só o desenho e os controles da simulação, em tela cheia. */
+  presenting: boolean;
+  setDrawer(side: "left" | "right", open: boolean): void;
+  setPresenting(on: boolean): void;
   setPlcEditor(open: boolean): void;
   setPalette(open: boolean): void;
   toggleExplain(): void;
@@ -57,6 +64,15 @@ export const useUi = create<UiState>()((set, get) => ({
   explain: false,
   role: readRole(),
   sideTab: "parts",
+  leftDrawer: false,
+  rightDrawer: false,
+  presenting: false,
+  setDrawer(side, open) {
+    set(side === "left" ? { leftDrawer: open, rightDrawer: false } : { rightDrawer: open, leftDrawer: false });
+  },
+  setPresenting(on) {
+    set({ presenting: on, leftDrawer: false, rightDrawer: false });
+  },
   setPlcEditor(open) {
     set({ plcEditor: open });
   },

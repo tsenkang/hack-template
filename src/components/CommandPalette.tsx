@@ -16,7 +16,7 @@ import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { COMPONENT_DEFS } from "@/symbols/registry";
 import { normalize } from "./lessons/CircuitsPanel";
-import { exportImage, exportJson, newProject, saveNow, startSimulation } from "./project-actions";
+import { exportImage, exportJson, exportPdf, newProject, saveNow, startSimulation } from "./project-actions";
 
 type Group = "action" | "part" | "circuit" | "exercise";
 
@@ -44,6 +44,7 @@ function buildCommands(): Command[] {
     a("exportJson", exportJson),
     a("exportSvg", () => exportImage("svg")),
     a("exportPng", () => exportImage("png")),
+    a("exportPdf", exportPdf),
     a("fit", fitAll, "0"),
     a("addTab", () => useEditor.getState().addCircuit()),
     a("explain", () => ui().toggleExplain()),

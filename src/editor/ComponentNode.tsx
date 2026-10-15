@@ -6,6 +6,7 @@ import type { ComponentSimState } from "@/engine/core/sim-types";
 import type { ComponentInstance } from "@/engine/core/types";
 import { tDynamic } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
+import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { getDef } from "@/symbols/registry";
 import { componentBounds, localToWorld, svgTransform } from "./geometry";
@@ -15,8 +16,9 @@ interface Props {
   selected: boolean;
   /** Ids dos conectores sem nenhuma linha, separados por vírgula (string para o memo comparar barato). */
   openPorts: string;
-  simState?: ComponentSimState;
   simulating: boolean;
+  /** Visível na tela: só então acompanha a simulação. */
+  live: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onPortPointerDown: (e: React.PointerEvent, id: string, portId: string) => void;
 }
@@ -28,11 +30,13 @@ export const ComponentNode = memo(function ComponentNode({
   comp,
   selected,
   openPorts,
-  simState,
   simulating,
+  live,
   onPointerDown,
   onPortPointerDown,
 }: Props) {
+  // Cada peça lê só o próprio estado: as outras não são redesenhadas quando esta muda.
+  const simState: ComponentSimState | undefined = useSim((s) => (live ? s.snapshot?.components[comp.id] : undefined));
   const def = getDef(comp.type);
   if (!def) return null;
   const { Symbol } = def;
@@ -46,6 +50,19 @@ export const ComponentNode = memo(function ComponentNode({
       data-component-id={comp.id}
       data-type={comp.type}
       role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        // Teclado: Enter seleciona; na simulação, Espaço/Enter aciona a peça enquanto segura.
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (simulating) {
+          if (def.interactive && !e.repeat) useSim.getState().actuate(comp.id, "left", true);
+        } else useEditor.getState().select([comp.id]);
+      }}
+      onKeyUp={(e) => {
+        if (simulating && def.interactive && (e.key === "Enter" || e.key === " ")) useSim.getState().actuate(comp.id, "left", false);
+      }}
       aria-label={comp.label ? `${name} ${comp.label}` : name}
       aria-pressed={selected}
       onPointerDown={(e) => {

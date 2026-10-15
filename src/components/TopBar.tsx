@@ -7,6 +7,9 @@ import {
   FolderOpen,
   Lightbulb,
   Moon,
+  PanelLeft,
+  PanelRight,
+  Presentation,
   Pause,
   Play,
   Redo2,
@@ -23,7 +26,8 @@ import { useEditor } from "@/store/editor-store";
 import { SPEEDS, useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { IconButton } from "./IconButton";
-import { exportImage, exportJson, newProject, saveNow, startSimulation } from "./project-actions";
+import { enterPresentation } from "./PresentationBar";
+import { exportImage, exportJson, exportPdf, newProject, saveNow, startSimulation } from "./project-actions";
 
 const divider = <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />;
 
@@ -42,8 +46,16 @@ export function TopBar() {
   const sim = useSim.getState;
 
   return (
-    <header className="flex h-12 items-center gap-1 border-b border-line bg-panel px-2">
-      <div className="mr-2 flex items-center gap-2">
+    <header className="flex h-12 items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-line bg-panel px-2">
+      <IconButton
+        label={t("panels.library")}
+        className="lg:hidden"
+        onClick={() => useUi.getState().setDrawer("left", !useUi.getState().leftDrawer)}
+        data-testid="toggle-left"
+      >
+        <PanelLeft size={18} />
+      </IconButton>
+      <div className="mr-2 flex shrink-0 items-center gap-2">
         <Logo />
         <span className="hidden font-semibold tracking-tight md:inline">{t("app.name")}</span>
       </div>
@@ -52,7 +64,7 @@ export function TopBar() {
         defaultValue={projectName}
         aria-label={t("toolbar.projectName")}
         title={t("toolbar.projectName")}
-        className="h-8 w-40 min-w-0 rounded-md border border-transparent bg-transparent px-2 text-sm hover:border-line focus:border-accent focus:outline-none"
+        className="hidden h-8 w-40 min-w-0 rounded-md sm:block border border-transparent bg-transparent px-2 text-sm hover:border-line focus:border-accent focus:outline-none"
         onBlur={(e) => {
           const name = e.target.value.trim();
           if (name && name !== projectName) s().setProjectName(name);
@@ -117,6 +129,9 @@ export function TopBar() {
         <Lightbulb size={18} />
         <span className="ml-1 hidden text-xs xl:inline">{t("explain.toggle")}</span>
       </IconButton>
+      <IconButton label={t("present.enter")} onClick={enterPresentation} data-testid="enter-presentation">
+        <Presentation size={18} />
+      </IconButton>
       <span className="flex-1" />
       <button
         type="button"
@@ -132,7 +147,7 @@ export function TopBar() {
         title={t("roles.hint")}
         value={role}
         onChange={(e) => useUi.getState().setRole(e.target.value as "student" | "teacher")}
-        className="mr-1 h-8 rounded-md border border-line bg-panel px-1 text-xs"
+        className="mr-1 hidden h-8 rounded-md border border-line bg-panel px-1 text-xs md:block"
         data-testid="role-select"
       >
         <option value="student">{t("roles.student")}</option>
@@ -143,6 +158,14 @@ export function TopBar() {
         onClick={() => useUi.getState().toggleTheme()}
       >
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </IconButton>
+      <IconButton
+        label={t("panels.properties")}
+        className="lg:hidden"
+        onClick={() => useUi.getState().setDrawer("right", !useUi.getState().rightDrawer)}
+        data-testid="toggle-right"
+      >
+        <PanelRight size={18} />
       </IconButton>
     </header>
   );
@@ -190,7 +213,7 @@ function ExportMenu() {
           {item(t("toolbar.exportJson"), exportJson)}
           {item(t("toolbar.exportSvg"), () => exportImage("svg"))}
           {item(t("toolbar.exportPng"), () => exportImage("png"))}
-          {item(t("toolbar.exportPdf"), () => {}, true)}
+          {item(t("toolbar.exportPdf"), exportPdf)}
         </div>
       )}
     </div>

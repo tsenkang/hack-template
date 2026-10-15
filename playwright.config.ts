@@ -9,9 +9,20 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /performance\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         // Permite usar um Chromium já instalado na máquina (ex.: PW_CHROMIUM_PATH=/opt/...).
+        launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
+      },
+    },
+    {
+      // Medição de quadros por segundo: roda sozinha, depois dos outros testes (sem disputar a CPU).
+      name: "desempenho",
+      testMatch: /performance\.spec\.ts/,
+      dependencies: ["chromium"],
+      use: {
+        ...devices["Desktop Chrome"],
         launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
       },
     },

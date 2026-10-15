@@ -6,6 +6,7 @@ import { useEditor } from "@/store/editor-store";
 import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { GRID } from "@/symbols/types";
+import { exitPresentation } from "./PresentationBar";
 import { saveNow, startSimulation } from "./project-actions";
 
 /** Atalhos de teclado globais. Ignorados enquanto se digita num campo. */
@@ -30,6 +31,12 @@ export function useShortcuts() {
         e.preventDefault();
         if (sim.status === "running") sim.pause();
         else startSimulation();
+        return;
+      }
+      // Modo apresentação: Esc sai (quando a simulação não está rodando).
+      if (e.key === "Escape" && useUi.getState().presenting && sim.status === "stopped") {
+        e.preventDefault();
+        exitPresentation();
         return;
       }
       if (sim.status !== "stopped") {
@@ -120,7 +127,15 @@ export function useShortcuts() {
       })();
       if (handled) e.preventDefault();
     };
+    // Saiu da tela cheia (Esc do navegador): sai também do modo apresentação.
+    const onFullscreen = () => {
+      if (!document.fullscreenElement && useUi.getState().presenting) exitPresentation();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+    };
   }, []);
 }
