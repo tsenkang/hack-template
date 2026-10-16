@@ -1,0 +1,459 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Cores do tema. Os símbolos (classes .sym*) e a interface usam só estes tokens,
+ * então trocar de tema claro/escuro não exige mexer nos componentes.
+ */
+:root {
+  --app-bg: #f3f4f6;
+  --panel: #ffffff;
+  --border: #e1e4ea;
+  --text: #1b2230;
+  --text-muted: #566070;
+  --accent: #1a66d6;
+  --accent-soft: #e5effc;
+  --hover: #eef1f5;
+  --danger: #c62828;
+  --canvas-bg: #fbfbfc;
+  --grid-dot: #c3c9d3;
+  --grid-line: #e9ecf1;
+  --sym-stroke: #1f2937;
+  --sym-bg: #ffffff;
+  --port-pneumatic: #1a66d6;
+  --port-hydraulic: #c2410c;
+  --port-pilot: #1a66d6;
+  --port-electric: #b91c1c;
+  --line-pressure: #1d4ed8;
+  --line-empty: #93b4e6;
+  --line-flow: #ffffff;
+  --elec-active: #dc2626;
+  --elec-energized: #fb923c;
+  --wire-current: #dc2626;
+  --wire-voltage: #f19a9a;
+  --oil-pressure: #c2410c;
+  --oil-return: #0e7490;
+  --oil-empty: #e7c3a8;
+  color-scheme: light;
+}
+
+.dark {
+  --app-bg: #0e1117;
+  --panel: #161a22;
+  --border: #2a303b;
+  --text: #e6e9ef;
+  --text-muted: #9ba4b3;
+  --accent: #5b9dff;
+  --accent-soft: #1b2a44;
+  --hover: #222834;
+  --danger: #f87171;
+  --canvas-bg: #11141b;
+  --grid-dot: #2f3542;
+  --grid-line: #1a1f28;
+  --sym-stroke: #d5dbe5;
+  --sym-bg: #11141b;
+  --port-pneumatic: #5b9dff;
+  --port-hydraulic: #fb923c;
+  --port-pilot: #5b9dff;
+  --port-electric: #f87171;
+  --line-pressure: #60a5fa;
+  --line-empty: #36507a;
+  --line-flow: #0e1117;
+  --elec-active: #f87171;
+  --elec-energized: #f97316;
+  --wire-current: #f87171;
+  --wire-voltage: #7f3b3b;
+  --oil-pressure: #fb923c;
+  --oil-return: #22d3ee;
+  --oil-empty: #5c4030;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-app: var(--app-bg);
+  --color-panel: var(--panel);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-hover: var(--hover);
+  --color-danger: var(--danger);
+  --color-canvas: var(--canvas-bg);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--app-bg);
+  color: var(--text);
+}
+
+/* ---------- Símbolos ---------- */
+.sym {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sym-bg {
+  fill: var(--sym-bg);
+}
+.sym-solid {
+  fill: var(--sym-stroke);
+}
+.sym-dashed {
+  stroke-dasharray: 4 3;
+}
+/* Estado elétrico: contato acionado, bobina energizada, falha. */
+.sym-active {
+  stroke: var(--elec-active);
+}
+.sym-energized {
+  fill: var(--elec-energized);
+}
+.sym-danger {
+  stroke: var(--danger);
+}
+.sym-text {
+  fill: var(--sym-stroke);
+  font-family: var(--font-sans);
+}
+
+/* ---------- Área de desenho ---------- */
+.grid-dot {
+  fill: var(--grid-dot);
+}
+.grid-line {
+  fill: none;
+  stroke: var(--grid-line);
+  stroke-width: 1;
+}
+.component {
+  cursor: move;
+}
+.component .hit {
+  fill: transparent;
+}
+.component .label {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  pointer-events: none;
+}
+.component .port {
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.component:hover .port,
+.component[aria-pressed="true"] .port {
+  opacity: 1;
+}
+.port-hit {
+  fill: transparent;
+}
+.port-dot {
+  stroke: var(--panel);
+  stroke-width: 1;
+}
+.port-pneumatic { fill: var(--port-pneumatic); }
+.port-hydraulic { fill: var(--port-hydraulic); }
+.port-pilot { fill: var(--port-pilot); }
+.port-hydraulic-pilot { fill: var(--port-hydraulic); }
+.port-electric { fill: var(--port-electric); }
+.component.interactive {
+  cursor: pointer;
+}
+.simulating .component:not(.interactive) {
+  cursor: default;
+}
+/* Conector solto: sempre visível (anel vazado) para o aluno ver o que falta ligar. */
+.component .port.port-open {
+  opacity: 1;
+}
+.port-open .port-dot {
+  fill: var(--panel);
+  stroke: var(--sym-stroke);
+  stroke-width: 1;
+}
+.component:hover .port-open .port-dot,
+.wiring .port-open .port-dot {
+  fill: var(--accent);
+  stroke: var(--panel);
+}
+.port {
+  cursor: crosshair;
+}
+.wiring .port {
+  opacity: 1;
+}
+.port-target {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+/* ---------- Linhas (tubos) ---------- */
+.wire,
+.wire-preview {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.wire-preview {
+  stroke: var(--accent);
+  stroke-dasharray: 5 4;
+}
+.wire-pilot {
+  stroke-dasharray: 5 3;
+}
+.wire-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  cursor: pointer;
+}
+.simulating .wire-hit {
+  cursor: inherit;
+}
+.wire-selected {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wire-traced {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.18;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Simulação: com pressão = linha grossa e azul forte; sem pressão = fina e clara. */
+.wire-pressurized {
+  stroke: var(--line-pressure);
+  stroke-width: 2.6;
+}
+.legend-oil {
+  stroke: var(--oil-pressure);
+}
+.legend-pressure {
+  stroke: var(--line-pressure);
+}
+.wire-empty {
+  stroke: var(--line-empty);
+  stroke-width: 1.5;
+}
+/* Óleo: com pressão = laranja forte e grosso; retorno ao tanque = azul-esverdeado; sem pressão = claro. */
+.wire-oil-pressure {
+  stroke: var(--oil-pressure);
+  stroke-width: 2.6;
+}
+.wire-oil-return {
+  stroke: var(--oil-return);
+  stroke-width: 2;
+}
+.wire-oil-empty {
+  stroke: var(--oil-empty);
+  stroke-width: 1.5;
+}
+/* Fios: com corrente = vermelho forte e grosso; só com tensão = vermelho claro; sem tensão = cinza. */
+.wire-current {
+  stroke: var(--wire-current);
+  stroke-width: 2.4;
+}
+.wire-live {
+  stroke: var(--wire-voltage);
+  stroke-width: 1.6;
+}
+.wire-empty-elec {
+  stroke: var(--text-muted);
+  stroke-width: 1.2;
+}
+.wire-flow {
+  fill: none;
+  stroke: var(--line-flow);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 2 10;
+  pointer-events: none;
+  animation: flow linear infinite;
+}
+.wire-flow.reverse {
+  animation-direction: reverse;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+/* ---------- Gráficos (diagrama de fases) ---------- */
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.chart-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+.chart-text {
+  fill: var(--text-muted);
+  font-family: var(--font-sans);
+}
+.chart-label {
+  fill: var(--text);
+  font-family: var(--font-sans);
+}
+.diag-badge-error { fill: var(--danger); }
+.diag-badge-warning { fill: #b45309; }
+.diag-badge-info { fill: var(--accent); }
+.diag-badge-text {
+  fill: #fff;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ---------- Esquema em escada ---------- */
+.ladder text {
+  font-family: var(--font-sans);
+  pointer-events: none;
+}
+.ladder-number {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.ladder-head {
+  fill: var(--text-muted);
+  font-size: 6px;
+}
+.ladder-ref {
+  fill: var(--text);
+  font-size: 7px;
+}
+.ladder-rule {
+  stroke: var(--text-muted);
+  stroke-width: 0.6;
+}
+
+.junction-dot {
+  fill: var(--sym-stroke);
+  pointer-events: none;
+}
+
+.selection-outline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.marquee {
+  fill: color-mix(in srgb, var(--accent) 10%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ---------- Ladder e GRAFCET ---------- */
+.ladder-rail {
+  stroke: var(--sym-stroke);
+  stroke-width: 3;
+}
+.ladder-wire {
+  fill: none;
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+}
+.ladder-on {
+  stroke: var(--wire-current);
+  stroke-width: 2.5;
+}
+.ladder-coil-on {
+  fill: var(--elec-energized);
+  fill-opacity: 0.6;
+}
+.ladder-text {
+  fill: var(--sym-stroke);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+.ladder-error {
+  fill: var(--danger);
+}
+.grafcet-step {
+  fill: var(--sym-bg);
+  stroke: var(--sym-stroke);
+  stroke-width: 1.5;
+}
+.grafcet-step-active {
+  fill: var(--elec-energized);
+}
+
+/* Cores das séries dos gráficos (distintas também em tons de cinza: cada faixa é separada). */
+.chart-series-0 { stroke: var(--accent); }
+.chart-series-1 { stroke: #c2410c; }
+.chart-series-2 { stroke: #0f766e; }
+.chart-series-3 { stroke: #7c3aed; }
+.dark .chart-series-1 { stroke: #fb923c; }
+.dark .chart-series-2 { stroke: #2dd4bf; }
+.dark .chart-series-3 { stroke: #a78bfa; }
+
+/* ---------- Toque (tablet) e modo apresentação ---------- */
+@media (pointer: coarse) {
+  .port-hit {
+    r: 13px;
+  }
+}
+.presenting .sym {
+  stroke-width: 2;
+}
+.presenting .wire {
+  stroke-width: 2.5;
+}
+.presenting .label,
+.presenting .sym-text {
+  font-weight: 600;
+}
+.component:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Nível de detalhe: com o zoom bem afastado, textos não dão para ler; escondê-los deixa o desenho mais leve. */
+.lod-low #circuit-content text {
+  display: none;
+}
+
+/* Na simulação, as peças que dá para acionar (botões, alavancas, roletes, solenoides) ficam marcadas. */
+.simulating .component.interactive .hit {
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.simulating .component.interactive:hover .hit {
+  fill: color-mix(in srgb, var(--accent) 16%, transparent);
+}
