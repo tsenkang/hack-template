@@ -32,7 +32,7 @@ test("insere peça com duplo clique, edita parâmetro e desfaz", async ({ page }
 });
 
 test("arrasta da biblioteca para o desenho e move a peça", async ({ page }) => {
-  await page.getByTestId("library-item-pneu.source.air").dragTo(page.locator(canvas), { targetPosition: { x: 200, y: 200 } });
+  await page.getByTestId("library-item-pneu.source.air").dragTo(page.locator(canvas), { targetPosition: { x: 60, y: 80 } }); // canto livre: a tela inicial some só durante o arraste real
   const part = page.locator(parts).first();
   await expect(part).toBeVisible();
   const before = await part.boundingBox();

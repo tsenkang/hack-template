@@ -90,7 +90,8 @@ function niceRange(min: number, max: number): [number, number] {
 const fmt = (v: number) => v.toLocaleString(getLocale(), { maximumFractionDigits: Math.abs(v) < 10 ? 2 : 0 });
 
 export function ChartsPanel() {
-  const version = useSim((s) => s.historyVersion);
+  // Redesenha a cada 6 amostras (~10 vezes por segundo): suave o bastante e leve mesmo com muitos cilindros.
+  const version = useSim((s) => Math.floor(s.historyVersion / 6));
   const simulating = useSim((s) => s.status !== "stopped");
   const project = useEditor((s) => s.project);
   const chosen = useCharts((s) => s.selected);

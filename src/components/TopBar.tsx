@@ -96,18 +96,38 @@ export function TopBar() {
       </IconButton>
       {divider}
       <div className="flex items-center gap-0.5" role="group" aria-label={t("toolbar.play")}>
+        {/* Ação principal da tela: botão com texto, cor de destaque e alvo grande. */}
         {status === "running" ? (
-          <IconButton label={`${t("toolbar.pause")} (F5)`} active onClick={() => sim().pause()}>
-            <Pause size={18} />
-          </IconButton>
+          <button
+            type="button"
+            title={`${t("toolbar.pause")} (F5)`}
+            onClick={() => sim().pause()}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent-soft px-3 text-sm font-semibold text-accent hover:opacity-90 focus-visible:outline-2 focus-visible:outline-accent pointer-coarse:h-10"
+          >
+            <Pause size={16} aria-hidden /> {t("toolbar.pauseShort")}
+          </button>
         ) : (
-          <IconButton label={`${t("toolbar.play")} (F5)`} onClick={startSimulation} data-testid="sim-play">
-            <Play size={18} />
-          </IconButton>
+          <button
+            type="button"
+            title={`${t("toolbar.play")} (F5)`}
+            onClick={startSimulation}
+            data-testid="sim-play"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-panel hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent pointer-coarse:h-10"
+          >
+            <Play size={16} aria-hidden /> {status === "paused" ? t("toolbar.resumeShort") : t("toolbar.playShort")}
+          </button>
         )}
-        <IconButton label={`${t("toolbar.stop")} (Esc)`} disabled={!simulating} onClick={() => sim().stop()} data-testid="sim-stop">
-          <Square size={16} />
-        </IconButton>
+        {simulating && (
+          <button
+            type="button"
+            title={`${t("toolbar.stop")} (Esc)`}
+            onClick={() => sim().stop()}
+            data-testid="sim-stop"
+            className="ml-0.5 inline-flex h-8 items-center gap-1.5 rounded-md border border-line px-2.5 text-sm font-medium hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent pointer-coarse:h-10"
+          >
+            <Square size={14} aria-hidden /> {t("toolbar.stopShort")}
+          </button>
+        )}
         <IconButton label={`${t("toolbar.step")} — ${t("toolbar.stepHint")}`} onClick={() => sim().step()}>
           <StepForward size={18} />
         </IconButton>
@@ -141,7 +161,7 @@ export function TopBar() {
         aria-label={t("palette.open")}
       >
         <Search size={14} aria-hidden /> {t("palette.button")}
-        <kbd className="rounded border border-line px-1 font-sans">Ctrl K</kbd>
+        <kbd className="rounded border border-line px-1 font-sans whitespace-nowrap">Ctrl K</kbd>
       </button>
       <select
         aria-label={t("toolbar.language")}

@@ -71,3 +71,20 @@ test("troca de idioma: inglês e espanhol, e a escolha fica salva", async ({ pag
   await page.getByTestId("locale-select").selectOption("pt-BR");
   await expect(page.getByRole("tab", { name: "Biblioteca" })).toBeVisible();
 });
+
+test("tela inicial: caminhos claros e dica do próximo passo", async ({ page }) => {
+  await expect(page.getByTestId("start-panel")).toBeVisible();
+  await page.getByTestId("start-example").click();
+  await expect(page.getByTestId("circuit-guide")).toBeVisible();
+  await expect(page.getByTestId("start-panel")).toHaveCount(0);
+  await expect(page.getByTestId("canvas-hint")).toContainText("Simular");
+  await page.getByTestId("sim-play").click();
+  await expect(page.getByTestId("canvas-hint")).toContainText("tracejado");
+  await expect(page.getByTestId("sim-stop")).toBeVisible();
+  await page.getByTestId("sim-stop").click();
+  // filtro por área na biblioteca
+  await page.getByRole("tab", { name: "Biblioteca" }).click();
+  await page.getByTestId("area-hydraulic").click();
+  await expect(page.getByTestId("library-item-hyd.pump.fixed")).toBeVisible();
+  await expect(page.getByTestId("library-item-pneu.source.air")).toHaveCount(0);
+});

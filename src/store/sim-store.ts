@@ -10,6 +10,7 @@ import { getDef } from "@/symbols/registry";
 import type { FromWorker, ToWorker } from "@/worker/protocol";
 import { useEditor } from "./editor-store";
 import { toast } from "./toast-store";
+import { useUi } from "./ui-store";
 
 export type SimStatus = "stopped" | "running" | "paused";
 
@@ -225,6 +226,8 @@ export const useSim = create<SimState>()((set, get) => {
         clearHistory();
         useEditor.getState().select([]);
         boot();
+        // Durante a simulação, o painel de baixo mostra o diagrama de fases (se a pessoa estava na lista de peças).
+        if (useUi.getState().bottomTab === "parts") useUi.getState().setBottomTab("phases");
       }
       send({ type: "run" });
       set({ status: "running" });

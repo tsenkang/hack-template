@@ -15,6 +15,7 @@ import { builtInExercises, fromCustom, useLesson } from "@/store/lesson-store";
 import { useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
 import { COMPONENT_DEFS } from "@/symbols/registry";
+import { setHintsEnabled } from "@/editor/CanvasHint";
 import { normalize } from "./lessons/CircuitsPanel";
 import { exportImage, exportJson, exportPdf, newProject, saveNow, startSimulation } from "./project-actions";
 
@@ -51,6 +52,7 @@ function buildCommands(): Command[] {
     a("role", () => ui().setRole(ui().role === "teacher" ? "student" : "teacher")),
     a("plc", () => ui().setPlcEditor(true)),
     a("theme", () => ui().toggleTheme()),
+    a("hints", () => setHintsEnabled(true)),
     a("charts", () => ui().setBottomTab("charts")),
     a("phases", () => ui().setBottomTab("phases")),
     a("warnings", () => ui().setBottomTab("warnings")),

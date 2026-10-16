@@ -5,6 +5,7 @@ import type { Point } from "@/engine/core/types";
 import { t } from "@/i18n";
 import { selectActiveCircuit, selectViewport, useEditor } from "@/store/editor-store";
 import { useUi } from "@/store/ui-store";
+import { StartPanel } from "./StartPanel";
 import { useSim } from "@/store/sim-store";
 import { MANUAL_ACTUATORS } from "@/engine/core/sim-types";
 import { getDef } from "@/symbols/registry";
@@ -69,6 +70,8 @@ export function Canvas() {
   const snapEnabled = useEditor((s) => s.snapEnabled);
   const simulating = useSim((s) => s.status !== "stopped");
   const presenting = useUi((st) => st.presenting);
+  // Projeto inteiro vazio (só esta aba, sem peças): mostra a tela inicial com os caminhos.
+  const onlyEmptyTab = useEditor((s) => s.project.circuits.every((c) => c.components.length === 0));
   const [marquee, setMarquee] = useState<Rect | null>(null);
   const [wirePreview, setWirePreview] = useState<WirePreview | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -520,12 +523,15 @@ export function Canvas() {
         </g>
       </svg>
 
-      {circuit.components.length === 0 && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
-          <p className="text-lg font-medium text-fg">{t("canvas.emptyTitle")}</p>
-          <p className="max-w-md text-sm text-muted">{t("canvas.emptyHint")}</p>
-        </div>
-      )}
+      {circuit.components.length === 0 &&
+        (onlyEmptyTab ? (
+          <StartPanel />
+        ) : (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center">
+            <p className="text-lg font-medium text-fg">{t("canvas.emptyTitle")}</p>
+            <p className="max-w-md text-sm text-muted">{t("canvas.emptyHint")}</p>
+          </div>
+        ))}
 
       <CanvasControls snapEnabled={snapEnabled} zoomOnly={simulating} />
     </div>

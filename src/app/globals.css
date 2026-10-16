@@ -446,3 +446,14 @@ body {
 .lod-low #circuit-content text {
   display: none;
 }
+
+/* Na simulação, as peças que dá para acionar (botões, alavancas, roletes, solenoides) ficam marcadas. */
+.simulating .component.interactive .hit {
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.simulating .component.interactive:hover .hit {
+  fill: color-mix(in srgb, var(--accent) 16%, transparent);
+}

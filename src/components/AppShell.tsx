@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useUi } from "@/store/ui-store";
 import { Canvas } from "@/editor/Canvas";
+import { CanvasHint } from "@/editor/CanvasHint";
 import { SimLegend } from "@/editor/SimLegend";
 import { useSim } from "@/store/sim-store";
 import { t } from "@/i18n";
@@ -88,6 +89,7 @@ export function AppShell() {
           <div className="min-h-0 flex-1">
             <Canvas />
           </div>
+          {!presenting && <CanvasHint simulating={simulating} />}
           {!presenting && <BottomPanel />}
         </main>
         {!presenting && (

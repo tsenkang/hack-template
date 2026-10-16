@@ -23,18 +23,22 @@ function searchText(def: ComponentDef) {
   );
 }
 
+type Area = "all" | "pneumatic" | "hydraulic" | "electric";
+const AREAS: Area[] = ["all", "pneumatic", "hydraulic", "electric"];
+
 /** Biblioteca de peças: busca, categorias e itens arrastáveis. */
 export function Library() {
   const [query, setQuery] = useState("");
+  const [area, setArea] = useState<Area>("all");
   const index = useMemo(() => COMPONENT_DEFS.map((def) => ({ def, text: searchText(def) })), []);
 
   const groups = useMemo(() => {
     const terms = normalize(query).split(/\s+/).filter(Boolean);
     const hits = index.filter(({ text }) => terms.every((term) => text.includes(term))).map(({ def }) => def);
-    return CATEGORIES.map((cat) => ({ cat, defs: hits.filter((d) => d.category === cat.id) })).filter(
-      (g) => g.defs.length > 0,
-    );
-  }, [index, query]);
+    return CATEGORIES.filter((cat) => area === "all" || cat.domain === area)
+      .map((cat) => ({ cat, defs: hits.filter((d) => d.category === cat.id) }))
+      .filter((g) => g.defs.length > 0);
+  }, [index, query, area]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -50,6 +54,25 @@ export function Library() {
             className="h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted"
           />
         </label>
+        {/* Filtro por área: em vez de ~150 peças de uma vez, só as da matéria da aula. */}
+        <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label={t("library.areaFilter")}>
+          {AREAS.map((a) => (
+            <button
+              key={a}
+              type="button"
+              aria-pressed={area === a}
+              onClick={() => setArea(a)}
+              data-testid={`area-${a}`}
+              className={
+                area === a
+                  ? "rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-panel pointer-coarse:py-2"
+                  : "rounded-full border border-line px-2.5 py-1 text-xs text-muted hover:bg-hover hover:text-fg pointer-coarse:py-2"
+              }
+            >
+              {t(`library.areas.${a}`)}
+            </button>
+          ))}
+        </div>
         <p className="mt-2 text-xs text-muted">{t("library.hint")}</p>
       </div>
 

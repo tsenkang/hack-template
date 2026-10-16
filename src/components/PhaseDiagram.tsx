@@ -20,7 +20,8 @@ const WINDOW = 20;
  * cilindro, de "recuado" (embaixo) a "avançado" (em cima), com os passos numerados.
  */
 export function PhaseDiagram() {
-  const version = useSim((s) => s.historyVersion);
+  // Redesenha a cada 6 amostras (~10 vezes por segundo): suave o bastante e leve mesmo com muitos cilindros.
+  const version = useSim((s) => Math.floor(s.historyVersion / 6));
   const project = useEditor((s) => s.project);
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);

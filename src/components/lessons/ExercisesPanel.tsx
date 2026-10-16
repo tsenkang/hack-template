@@ -152,7 +152,7 @@ function ExerciseView({ ex }: { ex: LessonExercise }) {
             type="button"
             disabled={checking}
             onClick={() => useLesson.getState().check()}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-panel hover:opacity-90 disabled:opacity-60"
             data-testid="check-exercise"
           >
             {checking ? t("lessons.checking") : t("lessons.check")}
@@ -278,7 +278,7 @@ function CreateExercise({ onDone }: { onDone: () => void }) {
           type="button"
           disabled={!ready}
           onClick={save}
-          className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-panel hover:opacity-90 disabled:opacity-50"
         >
           {t("lessons.saveExercise")}
         </button>
