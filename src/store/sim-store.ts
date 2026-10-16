@@ -189,7 +189,9 @@ export const useSim = create<SimState>()((set, get) => {
   };
   const boot = () => {
     worker?.terminate();
-    worker = new Worker(new URL("../worker/sim.worker.ts", import.meta.url), { type: "module" });
+    // Versões empacotadas de outro jeito (ex.: página de teste num arquivo só) podem fornecer o próprio Worker.
+    const custom = (globalThis as { __fluxolabWorker?: () => Worker }).__fluxolabWorker;
+    worker = custom ? custom() : new Worker(new URL("../worker/sim.worker.ts", import.meta.url), { type: "module" });
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const msg = e.data;
       if (msg.type === "snapshot") {
