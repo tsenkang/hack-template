@@ -1,7 +1,9 @@
 /**
  * Tradução simples: `t("toolbar.save")` ou `t("library.empty", { query })`.
- * O idioma atual é pt-BR; outros idiomas entram em LOCALES quando forem traduzidos.
+ * Idiomas: pt-BR (base), en e es. Um idioma novo é um arquivo com as mesmas chaves, registrado em LOCALES.
  */
+import { en } from "./en";
+import { es } from "./es";
 import { ptBR, type Dictionary } from "./pt-BR";
 
 type Join<K, P> = K extends string ? (P extends string ? `${K}.${P}` : never) : never;
@@ -13,14 +15,25 @@ type Paths<T> = T extends string
 
 export type I18nKey = Paths<Dictionary>;
 
-const LOCALES: Record<string, Dictionary> = { "pt-BR": ptBR };
+const LOCALES: Record<string, Dictionary> = { "pt-BR": ptBR, en, es };
+
+export type Locale = "pt-BR" | "en" | "es";
+/** Nome de cada idioma, escrito no próprio idioma (para o seletor). */
+export const LOCALE_NAMES: Record<Locale, string> = { "pt-BR": "Português", en: "English", es: "Español" };
 let current: Dictionary = ptBR;
+let currentLocale = "pt-BR";
+
+/** Idioma atual (para datas e números, ex.: `n.toLocaleString(getLocale())`). */
+export function getLocale() {
+  return currentLocale;
+}
 
 /** Textos já encontrados (sem variáveis): a busca no dicionário roda uma vez por chave. */
 let cache = new Map<string, string>();
 
 export function setLocale(locale: string) {
-  current = LOCALES[locale] ?? ptBR;
+  currentLocale = locale in LOCALES ? locale : "pt-BR";
+  current = LOCALES[currentLocale];
   cache = new Map();
 }
 

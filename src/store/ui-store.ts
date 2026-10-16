@@ -1,5 +1,6 @@
 /** Preferências de interface (tema, painéis). Guardadas no localStorage deste navegador. */
 import { create } from "zustand";
+import { LOCALE_NAMES, setLocale as applyLocale, type Locale } from "@/i18n";
 
 export type Theme = "light" | "dark";
 export type BottomTab = "charts" | "phases" | "parts" | "warnings";
@@ -9,6 +10,23 @@ export type SideTab = "parts" | "circuits" | "exercises";
 
 const THEME_KEY = "fluxolab:theme";
 const ROLE_KEY = "fluxolab:role";
+const LOCALE_KEY = "fluxolab:locale";
+
+/** Idioma salvo neste navegador; na primeira vez, o idioma do navegador (pt, en ou es). */
+function readLocale(): Locale {
+  if (typeof window === "undefined") return "pt-BR";
+  try {
+    const saved = localStorage.getItem(LOCALE_KEY);
+    if (saved && saved in LOCALE_NAMES) return saved as Locale;
+  } catch {
+    // sem localStorage
+  }
+  const nav = (navigator.language || "pt-BR").toLowerCase();
+  return nav.startsWith("es") ? "es" : nav.startsWith("en") ? "en" : "pt-BR";
+}
+
+const initialLocale = readLocale();
+applyLocale(initialLocale);
 
 function readRole(): Role {
   try {
@@ -28,6 +46,8 @@ interface UiState {
   /** Modo Explique: o painel da direita explica a peça clicada e o que ela está fazendo agora. */
   explain: boolean;
   role: Role;
+  locale: Locale;
+  setLocale(locale: Locale): void;
   sideTab: SideTab;
   /** Telas estreitas (tablet em pé, celular): biblioteca e propriedades viram gavetas. */
   leftDrawer: boolean;
@@ -63,6 +83,17 @@ export const useUi = create<UiState>()((set, get) => ({
   palette: false,
   explain: false,
   role: readRole(),
+  locale: initialLocale,
+  setLocale(locale) {
+    applyLocale(locale);
+    document.documentElement.lang = locale;
+    try {
+      localStorage.setItem(LOCALE_KEY, locale);
+    } catch {
+      // vale só nesta sessão
+    }
+    set({ locale });
+  },
   sideTab: "parts",
   leftDrawer: false,
   rightDrawer: false,

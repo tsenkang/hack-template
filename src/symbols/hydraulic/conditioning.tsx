@@ -1,6 +1,7 @@
 /** Condicionamento e medição do óleo: filtro, resfriador, aquecedor, acumulador e instrumentos. */
 import { Arrow } from "../draw";
 import type { ComponentDef, SymbolProps } from "../types";
+import { getLocale } from "@/i18n";
 
 const INLINE = [
   { id: "1", x: 0, y: 20, kind: "hydraulic" },
@@ -134,7 +135,7 @@ export const flowMeter: ComponentDef = {
       <Arrow from={[22, 20]} to={[38, 20]} head={4} />
       {state?.flow !== undefined && (
         <text className="sym-text" x={30} y={44} fontSize={8} textAnchor="middle">
-          {state.flow.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} l/min
+          {state.flow.toLocaleString(getLocale(), { maximumFractionDigits: 1 })} l/min
         </text>
       )}
     </g>

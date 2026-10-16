@@ -3,7 +3,7 @@
 import { FlipHorizontal2, RotateCw } from "lucide-react";
 import { useState } from "react";
 import type { ComponentInstance, ParamValue } from "@/engine/core/types";
-import { t, tDynamic } from "@/i18n";
+import { getLocale, t, tDynamic } from "@/i18n";
 import { selectActiveCircuit, useEditor } from "@/store/editor-store";
 import { isSimulating, useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
@@ -70,7 +70,7 @@ function ExplainSection({ comp }: { comp: ComponentInstance }) {
         )}
         {ports.length > 0 && (
           <p className="mt-1 text-xs text-muted tabular-nums">
-            {t("explain.ports")}: {ports.map((p) => `${p.port} = ${p.bar.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} bar`).join(" · ")}
+            {t("explain.ports")}: {ports.map((p) => `${p.port} = ${p.bar.toLocaleString(getLocale(), { maximumFractionDigits: 1 })} bar`).join(" · ")}
           </p>
         )}
       </div>

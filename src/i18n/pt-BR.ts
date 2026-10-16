@@ -28,6 +28,7 @@ export const ptBR = {
     themeLight: "Usar tema claro",
     themeDark: "Usar tema escuro",
     projectName: "Nome do projeto",
+    language: "Idioma",
     autosaved: "Salvo automaticamente",
   },
   sim: {
@@ -400,6 +401,7 @@ export const ptBR = {
     searchCircuits: "Buscar circuito…",
     circuitsHint: "{n} circuitos prontos, com explicação passo a passo. Abrir um circuito guarda o projeto atual em “Abrir”.",
     noResults: "Nada encontrado.",
+    ptOnly: "Os textos dos circuitos prontos e dos exercícios estão em português.",
     confirmStop: "A simulação vai parar. Continuar?",
     backToList: "Voltar à lista",
     backToExercises: "Voltar aos exercícios",

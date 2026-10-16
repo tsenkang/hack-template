@@ -21,7 +21,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { t } from "@/i18n";
+import { getLocale, LOCALE_NAMES, t, type Locale } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { SPEEDS, useSim } from "@/store/sim-store";
 import { useUi } from "@/store/ui-store";
@@ -39,6 +39,7 @@ export function TopBar() {
   const theme = useUi((s) => s.theme);
   const explain = useUi((s) => s.explain);
   const role = useUi((s) => s.role);
+  const locale = useUi((s) => s.locale);
   const status = useSim((s) => s.status);
   const speed = useSim((s) => s.speed);
   const simulating = status !== "stopped";
@@ -119,7 +120,7 @@ export function TopBar() {
         >
           {SPEEDS.map((v) => (
             <option key={v} value={v}>
-              {v.toLocaleString("pt-BR")}×
+              {v.toLocaleString(getLocale())}×
             </option>
           ))}
         </select>
@@ -142,6 +143,20 @@ export function TopBar() {
         <Search size={14} aria-hidden /> {t("palette.button")}
         <kbd className="rounded border border-line px-1 font-sans">Ctrl K</kbd>
       </button>
+      <select
+        aria-label={t("toolbar.language")}
+        title={t("toolbar.language")}
+        value={locale}
+        onChange={(e) => useUi.getState().setLocale(e.target.value as Locale)}
+        className="mr-1 hidden h-8 rounded-md border border-line bg-panel px-1 text-xs md:block"
+        data-testid="locale-select"
+      >
+        {(Object.keys(LOCALE_NAMES) as Locale[]).map((l) => (
+          <option key={l} value={l} lang={l}>
+            {LOCALE_NAMES[l]}
+          </option>
+        ))}
+      </select>
       <select
         aria-label={t("roles.label")}
         title={t("roles.hint")}

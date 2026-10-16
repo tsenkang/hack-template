@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { ArrowLeft, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { tDynamic, t } from "@/i18n";
+import { getLocale } from "@/i18n";
 import { CIRCUITS, getCircuit } from "@/library";
 import { compactSequence } from "@/library/scenario";
 import type { LibraryArea } from "@/library/types";
@@ -62,8 +63,9 @@ function CircuitList() {
           />
         </label>
         <p className="mt-2 text-xs text-muted">{t("lessons.circuitsHint", { n: CIRCUITS.length })}</p>
+        {getLocale() !== "pt-BR" && <p className="mt-1 text-xs italic text-muted" lang={getLocale()}>{t("lessons.ptOnly")}</p>}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-2" data-testid="circuit-list">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2" data-testid="circuit-list" lang="pt-BR">
         {groups.map((g) => (
           <section key={g.area} className="mb-3">
             <h3 className="px-1 pb-1 text-xs font-semibold text-muted">{tDynamic(`lessons.areas.${g.area}`)}</h3>
@@ -99,7 +101,7 @@ function CircuitGuide({ id }: { id: string }) {
   const c = getCircuit(id)!;
   const [done, setDone] = useState<number[]>([]);
   return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="circuit-guide">
+    <div className="flex h-full min-h-0 flex-col" data-testid="circuit-guide" lang="pt-BR">
       <div className="border-b border-line p-3">
         <button type="button" className="mb-2 inline-flex items-center gap-1 text-xs text-muted hover:text-fg" onClick={() => useLesson.getState().close()}>
           <ArrowLeft size={14} aria-hidden /> {t("lessons.backToList")}

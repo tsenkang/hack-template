@@ -1,5 +1,6 @@
 import { Arrow } from "../draw";
 import type { ComponentDef, SymbolProps } from "../types";
+import { getLocale } from "@/i18n";
 
 /** Ângulo do ponteiro: −135° (zero) a +135° (fundo de escala); 45° no modo de edição. */
 function needleAngle(pressure: number | undefined, range: number) {
@@ -18,7 +19,7 @@ function GaugeSymbol({ params, state }: SymbolProps) {
       <line className="sym" x1={10} y1={20} x2={10} y2={30} />
       {state?.pressure !== undefined && (
         <text className="sym-text" x={22} y={24} fontSize={8}>
-          {state.pressure.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bar
+          {state.pressure.toLocaleString(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bar
         </text>
       )}
     </g>

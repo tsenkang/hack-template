@@ -4,10 +4,10 @@
  */
 import type { ComponentSimState, SimSnapshot } from "@/engine/core/sim-types";
 import type { ComponentInstance } from "@/engine/core/types";
-import { t } from "@/i18n";
+import { getLocale, t } from "@/i18n";
 import type { ComponentDef } from "@/symbols/types";
 
-const n = (v: number, digits = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+const n = (v: number, digits = 1) => v.toLocaleString(getLocale(), { maximumFractionDigits: digits, minimumFractionDigits: 0 });
 
 /** Frases do "agora" para uma peça. Vazio se não houver nada a dizer. */
 export function explainNow(def: ComponentDef, comp: ComponentInstance, snap: SimSnapshot): string[] {

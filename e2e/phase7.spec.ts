@@ -58,3 +58,16 @@ test("modo apresentação esconde os painéis e volta com o botão Sair", async 
   await page.getByTestId("exit-presentation").click();
   await expect(page.getByRole("tab", { name: "Gráficos" })).toBeVisible();
 });
+
+test("troca de idioma: inglês e espanhol, e a escolha fica salva", async ({ page }) => {
+  await page.getByTestId("locale-select").selectOption("en");
+  await expect(page.getByRole("tab", { name: "Library" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "Library" })).toBeVisible();
+  await page.getByTestId("locale-select").selectOption("es");
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  await expect(page.getByTestId("library-item-pneu.cylinder.double-acting")).toContainText("doble efecto");
+  await page.getByTestId("locale-select").selectOption("pt-BR");
+  await expect(page.getByRole("tab", { name: "Biblioteca" })).toBeVisible();
+});

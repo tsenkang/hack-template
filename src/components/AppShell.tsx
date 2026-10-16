@@ -31,7 +31,14 @@ import { useShortcuts } from "./useShortcuts";
 export function AppShell() {
   const [ready, setReady] = useState(false);
   const simulating = useSim((s) => s.status !== "stopped");
-  const { leftDrawer, rightDrawer, presenting } = useUi(useShallow((s) => ({ leftDrawer: s.leftDrawer, rightDrawer: s.rightDrawer, presenting: s.presenting })));
+  const { leftDrawer, rightDrawer, presenting, locale } = useUi(
+    useShallow((s) => ({ leftDrawer: s.leftDrawer, rightDrawer: s.rightDrawer, presenting: s.presenting, locale: s.locale })),
+  );
+
+  // Idioma: o <html lang> acompanha (leitores de tela e hifenização).
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   // Ao abrir o app, reabre o último projeto salvo neste navegador.
   useEffect(() => {
@@ -55,7 +62,8 @@ export function AppShell() {
   }
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden select-none">
+    // `key`: trocar de idioma redesenha a tela inteira com os textos novos.
+    <div key={locale} className="grid h-dvh grid-rows-[auto_1fr] overflow-hidden select-none">
       {presenting ? <PresentationBar /> : <TopBar />}
       <div
         className={clsx(

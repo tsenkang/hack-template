@@ -2,7 +2,7 @@
 
 import { FileUp, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { t } from "@/i18n";
+import { getLocale, t } from "@/i18n";
 import { deleteProject, listProjects, type SavedProjectInfo } from "@/persistence/storage";
 import { useEditor } from "@/store/editor-store";
 import { useUi } from "@/store/ui-store";
@@ -60,7 +60,7 @@ export function OpenDialog() {
               >
                 <span className="block text-sm font-medium">{p.name}</span>
                 <span className="block text-xs text-muted">
-                  {t("dialogs.updatedAt", { date: new Date(p.updatedAt).toLocaleString("pt-BR") })}
+                  {t("dialogs.updatedAt", { date: new Date(p.updatedAt).toLocaleString(getLocale()) })}
                 </span>
               </button>
               {p.id !== currentId && (

@@ -5,7 +5,8 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
-  use: { baseURL: "http://localhost:4173", trace: "retain-on-failure" },
+  // locale pt-BR: o app escolhe o idioma pelo navegador, e os testes leem os textos em português.
+  use: { baseURL: "http://localhost:4173", trace: "retain-on-failure", locale: "pt-BR" },
   projects: [
     {
       name: "chromium",

@@ -1,6 +1,6 @@
 "use client";
 
-import { t } from "@/i18n";
+import { getLocale, t } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { useSim } from "@/store/sim-store";
 
@@ -36,7 +36,7 @@ export function SimLegend() {
   const hasPneumatic = useEditor(has("pneu."));
   const hasHydraulic = useEditor(has("hyd."));
   const hasElectric = useEditor(has("elec."));
-  const seconds = time.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const seconds = time.toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div

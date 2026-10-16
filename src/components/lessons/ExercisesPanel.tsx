@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { createId } from "@/engine/core/ids";
 import type { Project } from "@/engine/core/types";
 import { t } from "@/i18n";
+import { getLocale } from "@/i18n";
 import { exportExercise, parseExercise, type CustomExercise } from "@/persistence/exercise-file";
 import { useEditor } from "@/store/editor-store";
 import { builtInExercises, fromCustom, useLesson, type LessonExercise } from "@/store/lesson-store";
@@ -55,6 +56,7 @@ function ExerciseList({ onCreate }: { onCreate: () => void }) {
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-line p-3 text-xs text-muted">
         <p>{t(role === "teacher" ? "lessons.exercisesTeacher" : "lessons.exercisesStudent")}</p>
+        {getLocale() !== "pt-BR" && <p className="mt-1 text-xs italic text-muted" lang={getLocale()}>{t("lessons.ptOnly")}</p>}
         <div className="mt-2 flex flex-wrap gap-1">
           <input
             ref={fileRef}
@@ -114,7 +116,7 @@ function ExerciseList({ onCreate }: { onCreate: () => void }) {
         )}
         <section>
           <h3 className="px-1 pb-1 text-xs font-semibold text-muted">{t("lessons.builtInExercises")}</h3>
-          <ul className="space-y-1" data-testid="exercise-list">
+          <ul className="space-y-1" data-testid="exercise-list" lang="pt-BR">
             {builtInExercises().map((ex) => row(ex))}
           </ul>
         </section>

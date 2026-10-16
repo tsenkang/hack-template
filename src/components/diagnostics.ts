@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { checkProject, type Diagnostic, type DiagnosticCode } from "@/engine/diagnostics/static";
 import type { Project } from "@/engine/core/types";
-import { tDynamic } from "@/i18n";
+import { getLocale, tDynamic } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { useSim } from "@/store/sim-store";
 import { getDef } from "@/symbols/registry";
@@ -34,7 +34,7 @@ export function useDiagnostics(): Diagnostic[] {
       circuitId: circuitOf.get(w.componentId) ?? project.circuits[0].id,
       componentId: w.componentId,
       port: w.port,
-      vars: w.value !== undefined ? { value: w.value.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) } : undefined,
+      vars: w.value !== undefined ? { value: w.value.toLocaleString(getLocale(), { maximumFractionDigits: 1 }) } : undefined,
     }));
   }, [warnings, project]);
   return useMemo(() => [...runtime, ...statics], [runtime, statics]);

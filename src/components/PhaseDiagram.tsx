@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { t } from "@/i18n";
+import { getLocale, t } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { motionHistory, useSim } from "@/store/sim-store";
 import { stepStarts } from "./phase-steps";
@@ -113,7 +113,7 @@ export function PhaseDiagram() {
         {/* eixo do tempo */}
         {ticks.map((v) => (
           <text key={v} className="chart-text" x={x(v)} y={height - 6} fontSize={9} textAnchor="middle">
-            {v.toLocaleString("pt-BR")} s
+            {v.toLocaleString(getLocale())} s
           </text>
         ))}
         {hoverIndex !== null && (
@@ -126,7 +126,7 @@ export function PhaseDiagram() {
           style={{ left: Math.min(x(data.time[hoverIndex]) + 8, width - 140) }}
         >
           <div className="text-muted tabular-nums">
-            t = {data.time[hoverIndex].toLocaleString("pt-BR", { maximumFractionDigits: 2 })} s
+            t = {data.time[hoverIndex].toLocaleString(getLocale(), { maximumFractionDigits: 2 })} s
           </div>
           {data.rows.map((row) => (
             <div key={row.id} className="tabular-nums">

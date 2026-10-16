@@ -1,6 +1,6 @@
 /** Ações de projeto (novo, salvar, abrir, importar, exportar) usadas pela barra e pelos atalhos. */
 import { circuitBounds } from "@/editor/actions";
-import { t, tDynamic } from "@/i18n";
+import { getLocale, t, tDynamic } from "@/i18n";
 import { buildCircuitSvg, download, exportPng, exportProjectJson, exportSvg, rasterize, safeFileName } from "@/persistence/export";
 import { A4_LANDSCAPE, buildPdf, type PdfPage } from "@/persistence/pdf";
 import { parseProjectFile } from "@/persistence/file-format";
@@ -74,7 +74,7 @@ export async function exportPdf() {
   const editor = useEditor.getState();
   const original = editor.activeCircuitId;
   const project = editor.project;
-  const date = new Date().toLocaleDateString("pt-BR");
+  const date = new Date().toLocaleDateString(getLocale());
   const margin = 36;
   const pages: PdfPage[] = [];
   try {

@@ -9,7 +9,7 @@ import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
 import type { Project } from "@/engine/core/types";
-import { t, tDynamic } from "@/i18n";
+import { getLocale, t, tDynamic } from "@/i18n";
 import { useEditor } from "@/store/editor-store";
 import { motionHistory, useSim, type MeasureField } from "@/store/sim-store";
 import { getDef } from "@/symbols/registry";
@@ -87,7 +87,7 @@ function niceRange(min: number, max: number): [number, number] {
   return [lo, hi];
 }
 
-const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: Math.abs(v) < 10 ? 2 : 0 });
+const fmt = (v: number) => v.toLocaleString(getLocale(), { maximumFractionDigits: Math.abs(v) < 10 ? 2 : 0 });
 
 export function ChartsPanel() {
   const version = useSim((s) => s.historyVersion);
@@ -217,7 +217,7 @@ export function ChartsPanel() {
             })}
             {ticks.map((v) => (
               <text key={v} className="chart-text" x={x(v)} y={height - 4} fontSize={9} textAnchor="middle">
-                {v.toLocaleString("pt-BR")} s
+                {v.toLocaleString(getLocale())} s
               </text>
             ))}
             {hoverIndex !== null && (

@@ -2,7 +2,7 @@
 
 Simulador web de circuitos **pneumáticos, hidráulicos, eletropneumáticos e eletro-hidráulicos**, inspirado no FluidSIM, porém mais moderno e interativo. Símbolos desenhados do zero seguindo **ISO 1219** (fluídica) e **IEC 60617** (elétrica). Público: alunos de cursos técnicos, professores e técnicos de manutenção.
 
-> Status: **Fase 6 — Interatividade avançada** concluída. Aguardando OK para iniciar a Fase 7.
+> Status: **Fase 7 — Acabamento** concluída. Todas as fases do plano foram entregues; falta o merge e a conexão na Netlify.
 
 ---
 
@@ -317,5 +317,57 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - **Exercícios do professor ficam no navegador e circulam como arquivo**, já que o site não tem servidor. O projeto inicial do aluno é gerado sozinho (só cilindros e fontes).
 - **Duplo clique no CLP**: a área de desenho captura o ponteiro para arrastar, então o duplo clique é contado “na mão”.
 
+### Fase 7 — Acabamento ✅
+- **PWA instalável e offline**:
+  - `manifest.webmanifest` e ícones (192, 512 e “maskable”);
+  - service worker próprio, gerado depois do build por `scripts/build-sw.mjs`, que guarda todos os arquivos do site com uma versão calculada pelo conteúdo;
+  - depois do primeiro acesso o app abre e **simula sem internet** (o Web Worker também sai do cache);
+  - versão nova → aviso “Nova versão disponível — Recarregar”;
+  - o `netlify.toml` deixa `sw.js` e o manifest sem cache.
+- **Exportar PDF**: uma página A4 deitada por aba (desenho em alta resolução + título e data) e a lista de peças no fim. O PDF é gerado no próprio navegador, sem biblioteca. As imagens exportadas (SVG/PNG/PDF) ganharam os estilos de linhas e do esquema em escada, que antes saíam pretos.
+- **Tablet**:
+  - abaixo de 1024 px de largura, biblioteca e propriedades viram gavetas (botões nos cantos da barra);
+  - botões e conectores maiores em telas de toque;
+  - toque segura e aciona válvulas e botões;
+  - pinça para zoom (já existia).
+- **Modo apresentação**: tela cheia, sem painéis, barra com controles grandes e linhas mais grossas. Sai com Esc ou com o botão.
+- **Acessibilidade**:
+  - auditoria automática com axe (WCAG 2.1 A/AA) nos temas claro e escuro, **sem violações graves**: as abas foram reestruturadas e a área rolável do painel de baixo recebe foco;
+  - as peças do desenho entram no Tab, Enter seleciona e Espaço/Enter aciona durante a simulação.
+- **Idiomas**: português, **inglês e espanhol**.
+  - O seletor fica na barra; na primeira vez vale o idioma do navegador, e a escolha fica salva.
+  - O `<html lang>` acompanha o idioma, e números e datas usam o formato de cada idioma.
+  - Um teste confere que os três dicionários têm as mesmas chaves e as mesmas variáveis.
+- **Desempenho** com 150 peças (30 cilindros em ciclo contínuo):
+  - cada peça e cada linha leem só o próprio estado da simulação, e uma linha só é redesenhada quando a aparência dela muda (cor ou velocidade da animação);
+  - os estados que chegam do Worker são juntados num por quadro da tela;
+  - a pressão de cada conector vai só a cada 6 quadros;
+  - peças fora da tela não acompanham a simulação;
+  - textos ilegíveis (zoom abaixo de 42%) são escondidos;
+  - os textos do dicionário ficam em cache.
+- **README final** com tudo o que o app faz, atalhos, publicação, domínio próprio e como acrescentar peças, circuitos e exercícios.
+- **Testes**: 445 unitários e 32 de tela. Os de tela incluem:
+  - PWA offline;
+  - PDF;
+  - tablet com toque;
+  - apresentação;
+  - acessibilidade nos dois temas;
+  - teclado;
+  - troca de idioma;
+  - medição de quadros por segundo.
+
+**Decisões e limites da Fase 7**
+- **60 quadros por segundo com 150 peças: meta não comprovada.** Na máquina de testes (servidor sem placa de vídeo, 4 núcleos), a medição com 150 peças simulando ao mesmo tempo dá:
+  - **45 a 57 quadros/s** na vista de trabalho (zoom normal);
+  - **33 a 42 quadros/s** com as 150 peças na tela (zoom 30%).
+
+  Antes das otimizações eram 24. Com a simulação pausada e o fluxo animando, ficam 60 quadros/s. O custo que sobra é o navegador redesenhar o SVG a cada estado novo. Num computador com placa de vídeo deve ficar mais perto de 60, mas isso não foi medido. O teste automático exige pelo menos 40 e 25 quadros/s, para não falhar na máquina de CI.
+- **Textos dos circuitos prontos e dos exercícios só em português.** A interface inteira está nos três idiomas. Os roteiros (49 circuitos, 12 exercícios) são conteúdo didático longo e ficam marcados como `lang="pt-BR"`, com um aviso quando outro idioma está escolhido.
+- **PDF com o desenho como imagem** (JPEG em alta resolução), e não vetorial: assim não entra nenhuma biblioteca de PDF no site.
+- **Lighthouse** não roda nesta máquina. Em vez dele, o teste de tela confere o que o Lighthouse olha para PWA: manifest, ícones e service worker, abrindo e simulando com a rede desligada.
+
 ## 7. Próximo passo
-Com o OK do usuário: **Fase 7 — Acabamento** (tablet, PWA instalável e offline, exportar PDF, en/es, desempenho com 150 peças, acessibilidade, modo apresentação, README final).
+1. Revisar e fazer o merge do PR na `main`.
+2. Conectar o repositório na Netlify (seção 1); o link do site sai na hora (`https://<nome>.netlify.app`).
+3. Desconectar o projeto antigo na Vercel.
+4. Opcional: domínio próprio (passos no README).
