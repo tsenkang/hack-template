@@ -54,7 +54,7 @@ export function Library() {
             className="h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted"
           />
         </label>
-        {/* Filtro por área: em vez de ~150 peças de uma vez, só as da matéria da aula. */}
+        {/* Filtro por área: em vez de 118 tipos de peça de uma vez, só as da matéria da aula. */}
         <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label={t("library.areaFilter")}>
           {AREAS.map((a) => (
             <button

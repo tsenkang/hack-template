@@ -6,7 +6,7 @@ export type Theme = "light" | "dark";
 export type BottomTab = "charts" | "phases" | "parts" | "warnings";
 /** Aluno: interface enxuta, sem soluções. Professor: cria exercícios e vê as soluções. */
 export type Role = "student" | "teacher";
-export type SideTab = "parts" | "circuits" | "exercises";
+export type SideTab = "parts" | "circuits" | "exercises" | "assistant";
 
 const THEME_KEY = "fluxolab:theme";
 const ROLE_KEY = "fluxolab:role";

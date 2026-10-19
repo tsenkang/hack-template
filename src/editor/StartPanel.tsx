@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, GraduationCap, Shapes } from "lucide-react";
+import { BookOpen, GraduationCap, Shapes, Sparkles } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { t } from "@/i18n";
 import { useLesson } from "@/store/lesson-store";
@@ -48,6 +48,7 @@ export function StartPanel() {
       primary: true,
     },
     { icon: GraduationCap, title: t("start.exerciseTitle"), text: t("start.exerciseText"), run: () => openSide("exercises"), testId: "start-exercise" },
+    { icon: Sparkles, title: t("start.assistantTitle"), text: t("start.assistantText"), run: () => openSide("assistant"), testId: "start-assistant" },
     { icon: Shapes, title: t("start.blankTitle"), text: t("start.blankText"), run: () => openSide("parts"), testId: "start-blank" },
   ];
   if (isDragging) return null;

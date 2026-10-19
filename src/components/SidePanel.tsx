@@ -3,14 +3,16 @@
 import clsx from "clsx";
 import { t } from "@/i18n";
 import { useUi, type SideTab } from "@/store/ui-store";
+import { AssistantPanel } from "./assistant/AssistantPanel";
 import { CircuitsPanel } from "./lessons/CircuitsPanel";
 import { ExercisesPanel } from "./lessons/ExercisesPanel";
 import { Library } from "./Library";
 
-const TABS: { id: SideTab; label: "library.title" | "lessons.circuits" | "lessons.exercises" }[] = [
+const TABS: { id: SideTab; label: "library.title" | "lessons.circuits" | "lessons.exercises" | "assistant.tab" }[] = [
   { id: "parts", label: "library.title" },
   { id: "circuits", label: "lessons.circuits" },
   { id: "exercises", label: "lessons.exercises" },
+  { id: "assistant", label: "assistant.tab" },
 ];
 
 /** Painel da esquerda: peças, circuitos prontos e exercícios. */
@@ -28,7 +30,7 @@ export function SidePanel() {
             aria-selected={tab === x.id}
             onClick={() => useUi.getState().setSideTab(x.id)}
             className={clsx(
-              "-mb-px flex-1 border-b-2 px-1 py-2 text-xs font-semibold",
+              "-mb-px flex-1 border-b-2 px-0.5 py-2 text-[11px] font-semibold",
               tab === x.id ? "border-accent text-accent" : "border-transparent text-muted hover:text-fg",
             )}
           >
@@ -40,6 +42,7 @@ export function SidePanel() {
         {tab === "parts" && <Library />}
         {tab === "circuits" && <CircuitsPanel />}
         {tab === "exercises" && <ExercisesPanel />}
+        {tab === "assistant" && <AssistantPanel />}
       </div>
     </aside>
   );

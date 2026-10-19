@@ -58,6 +58,7 @@ function buildCommands(): Command[] {
     a("warnings", () => ui().setBottomTab("warnings")),
     a("circuits", () => ui().setSideTab("circuits")),
     a("exercises", () => ui().setSideTab("exercises")),
+    a("assistant", () => ui().setSideTab("assistant")),
   ];
   const parts: Command[] = COMPONENT_DEFS.map((d) => ({
     id: `p:${d.type}`,

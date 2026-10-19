@@ -1,0 +1,98 @@
+{
+ "name": "Avanço por botão e retorno automático (rolete)",
+ "tabs": [
+  {
+   "name": "Circuito",
+   "parts": [
+    {
+     "ref": "A1",
+     "type": "pneu.cylinder.double-acting",
+     "x": 200,
+     "y": 0,
+     "label": "A1"
+    },
+    {
+     "ref": "V1",
+     "type": "pneu.valve.5-2.pilot-pilot",
+     "x": 160,
+     "y": 130,
+     "label": "V1"
+    },
+    {
+     "ref": "S1",
+     "type": "pneu.valve.3-2-nc.button-spring",
+     "x": -60,
+     "y": 260,
+     "label": "S1"
+    },
+    {
+     "ref": "S2",
+     "type": "pneu.valve.3-2-nc.roller-spring",
+     "x": 340,
+     "y": 260,
+     "label": "S2"
+    },
+    {
+     "ref": "P1",
+     "type": "pneu.source.air",
+     "x": 250,
+     "y": 400,
+     "label": "P1"
+    }
+   ],
+   "wires": [
+    {
+     "from": "A1:A",
+     "to": "V1:4"
+    },
+    {
+     "from": "A1:B",
+     "to": "V1:2"
+    },
+    {
+     "from": "S1:2",
+     "to": "V1:14"
+    },
+    {
+     "from": "S2:2",
+     "to": "V1:12"
+    },
+    {
+     "from": "P1:1",
+     "to": "V1:1"
+    },
+    {
+     "from": "P1:1",
+     "to": "S1:1"
+    },
+    {
+     "from": "P1:1",
+     "to": "S2:1"
+    }
+   ]
+  }
+ ],
+ "test": {
+  "actions": [
+   {
+    "t": 0.2,
+    "target": "S1",
+    "side": "left",
+    "active": true
+   },
+   {
+    "t": 0.4,
+    "target": "S1",
+    "side": "left",
+    "active": false
+   }
+  ],
+  "duration": 4,
+  "expect": "A1+ A1-"
+ },
+ "steps": [
+  "Dê um toque em S1: V1 memoriza o avanço.",
+  "No fim do curso, a haste aciona o rolete S2 (posição 100%), que pilota o lado 12 de V1.",
+  "V1 volta e a haste recua. O rolete fica no desenho separado do cilindro, ligado pelo rótulo A1."
+ ]
+}

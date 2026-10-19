@@ -6,7 +6,7 @@ O plano completo, com fases, decisões e riscos, está em [`PLANO.md`](PLANO.md)
 
 ## O que dá para fazer
 
-- **Montar circuitos** arrastando peças da biblioteca (cerca de 150 peças): pneumática, hidráulica, elétrica (IEC) e CLP. As linhas fazem curvas de 90° sozinhas.
+- **Montar circuitos** arrastando peças da biblioteca (118 tipos de peça): pneumática, hidráulica, elétrica (IEC) e CLP. As linhas fazem curvas de 90° sozinhas.
 - **Simular**:
   - o ar é compressível (ISO 6358) e o óleo quase incompressível;
   - cilindros com massa, atrito e amortecimento;
@@ -20,6 +20,9 @@ O plano completo, com fases, decisões e riscos, está em [`PLANO.md`](PLANO.md)
 - **CLP**: coloque um CLP (Elétrica · CLP) e dê dois cliques para programar em **ladder** ou **GRAFCET**.
 - **49 circuitos prontos** com explicação passo a passo e **12 exercícios com correção automática** (painel da esquerda).
 - **Modos Aluno e Professor** (seletor na barra): o professor vê as soluções e cria exercícios a partir de um projeto.
+- **Assistente** (aba “Assistente” no painel da esquerda): descreva o circuito com suas palavras e escolha o nível (**Básico, Intermediário ou Avançado**). O Claude monta as peças e as ligações; o FluxoLab confere com o detector de erros e a simulação, devolve o resultado ao Claude para corrigir e abre o circuito com o passo a passo.
+  - Usa a chave da API da Anthropic de quem usa o app, salva só no navegador e enviada direto para a Anthropic (o site não tem servidor). Custa alguns centavos de dólar por circuito.
+  - O nível muda o tipo de solução (poucas peças e explicação simples no Básico; sequências, CLP e hidráulica no Avançado) e quanto o modelo raciocina.
 - **Ctrl+K**: paleta de comandos para achar qualquer ação, peça, circuito ou exercício.
 - **Detector de erros**: conectores soltos, falta de fonte, sinal preso, curto-circuito, sobrepressão e outros, com marcação no desenho.
 - **Arquivos**:
@@ -124,6 +127,7 @@ src/engine       motor de simulação em TypeScript puro (sem React), testável 
 src/worker       Web Worker que roda o motor sem travar a tela
 src/store        estado (Zustand): projeto, desfazer, simulação, preferências, aulas
 src/persistence  IndexedDB, formato .json versionado, SVG/PNG/PDF, arquivos de exercício
+src/assistant    assistente: catálogo de peças para o Claude, montagem e conferência do circuito que ele descreve
 src/library      circuitos prontos, exercícios e o roteiro que corrige os exercícios
 src/i18n         textos em pt-BR, en e es
 scripts          geração do service worker depois do build

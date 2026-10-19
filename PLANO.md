@@ -366,6 +366,14 @@ No fim de cada fase: testes rodando, app rodando, resumo em 5 linhas, PR aberto 
 - **PDF com o desenho como imagem** (JPEG em alta resolução), e não vetorial: assim não entra nenhuma biblioteca de PDF no site.
 - **Lighthouse** não roda nesta máquina. Em vez dele, o teste de tela confere o que o Lighthouse olha para PWA: manifest, ícones e service worker, abrindo e simulando com a rede desligada.
 
+### Depois da Fase 7 — Assistente que monta circuitos
+- Aba **Assistente**: a pessoa escolhe o **nível** (Básico, Intermediário, Avançado), descreve o circuito e o Claude (modelo `claude-opus-5-5`) monta peças e ligações pela ferramenta `build_circuit`.
+- **Conferência automática**: o FluxoLab monta o circuito, roda o detector de erros e, se o Claude mandou um roteiro de teste, simula e compara a sequência dos cilindros. O relatório volta ao Claude, que corrige até 4 vezes.
+- **Nível**: muda as regras da solução (quantidade e tipo de peças, profundidade da explicação) e o esforço do raciocínio (`low`, `medium`, `high`). Fica salvo no navegador.
+- **Chave da API**: cada pessoa usa a própria chave, salva só no navegador; a chamada vai direto do navegador para a Anthropic. Escolhido porque o site é estático e não tem servidor para guardar uma chave.
+- Fallback do servidor ligado (`fallbacks: "default"`): se o modelo recusar por política, a API tenta outro modelo.
+- **Testes**: os 49 circuitos prontos, descritos no formato da ferramenta, remontam e passam no roteiro (confere catálogo, portas e o formato). Na tela, a API é simulada: o nível vira o esforço, o circuito abre no desenho e a chave recusada mostra o erro.
+
 ## 7. Próximo passo
 1. Revisar e fazer o merge do PR na `main`.
 2. Conectar o repositório na Netlify (seção 1); o link do site sai na hora (`https://<nome>.netlify.app`).
